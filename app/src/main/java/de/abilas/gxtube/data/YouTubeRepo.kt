@@ -108,7 +108,20 @@ object YouTubeRepo {
 
     // ---------------------------------------------------------------- Video
 
-    suspend fun stream(url: String): StreamInfo = io { StreamInfo.getInfo(service, url) }
+    suspend fun stream(url: String): StreamInfo = io {
+        try {
+            StreamInfo.getInfo(service, url)
+        } catch (e: SignInConfirmNotBotException) {
+            // YouTube hält das Netz gerade für einen Bot – mit Konto klappt es meist trotzdem
+            if (!Account.loggedIn) throw e
+            Http.withAccount.set(true)
+            try {
+                StreamInfo.getInfo(service, url)
+            } finally {
+                Http.withAccount.remove()
+            }
+        }
+    }
 
     fun relatedOf(info: StreamInfo): List<VideoItem> =
         info.relatedItems.mapNotNull { (it as? StreamInfoItem)?.toVideoItem() }

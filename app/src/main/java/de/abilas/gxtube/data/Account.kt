@@ -97,6 +97,17 @@ object Account {
         return "SAPISIDHASH $hash SAPISID1PHASH $hash SAPISID3PHASH $hash"
     }
 
+    /** Header für eine Anfrage mit Konto (für den Fallback bei der Bot-Sperre). */
+    fun authHeaders(): Map<String, String>? {
+        val account = _state.value ?: return null
+        return mapOf(
+            "Cookie" to account.cookies,
+            "Authorization" to authorization(account.cookies),
+            "X-Goog-AuthUser" to "0",
+            "X-Origin" to ORIGIN,
+        )
+    }
+
     private fun context(): String {
         val s = Library.settings
         val version = runCatching { YoutubeParsingHelper.getClientVersion() }.getOrDefault("2.20260805.01.00")

@@ -13,6 +13,9 @@ object Http {
     const val USER_AGENT =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
 
+    /** Gesetzt, wenn eine Extractor-Anfrage mit dem angemeldeten Konto laufen soll (gilt nur für diesen Thread). */
+    val withAccount = ThreadLocal<Boolean>()
+
     val client: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
@@ -34,6 +37,9 @@ class NewPipeDownloader : Downloader() {
         request.headers().forEach { (name, values) ->
             builder.removeHeader(name)
             values.forEach { builder.addHeader(name, it) }
+        }
+        if (Http.withAccount.get() == true && request.url().contains("youtube.com/youtubei/")) {
+            Account.authHeaders()?.forEach { (name, value) -> builder.header(name, value) }
         }
 
         Http.client.newCall(builder.build()).execute().use { response ->
