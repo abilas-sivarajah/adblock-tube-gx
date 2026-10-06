@@ -17,9 +17,13 @@ anstelle der Werbung, wie sie im Browser vorkommen kann.
 2. `GXTube-….apk` herunterladen und öffnen.
 3. Android fragt beim ersten Mal, ob der Browser Apps installieren darf → **erlauben**.
 
-Jeder Push auf `main` baut automatisch eine neue Version (GitHub Actions). Updates einfach drüber
-installieren – Abos, Verlauf und Einstellungen bleiben erhalten (alle Versionen sind mit demselben
-Schlüssel signiert, siehe unten).
+Jeder Push auf `main` baut automatisch eine neue Version (GitHub Actions).
+
+**Updates:** Ab Version 0.1.5 sucht GX Tube beim Öffnen selbst nach einer neuen Version (höchstens alle
+15 Minuten) und installiert sie mit einem Tipp – ohne Browser. Beim ersten Mal einmalig erlauben, dass
+GX Tube Apps installieren darf. „Später“ fragt erst nach 12 Stunden wieder. Abschaltbar und manuell
+auslösbar unter Einstellungen → Über. Abos, Verlauf und Einstellungen bleiben erhalten (alle Versionen
+sind mit demselben Schlüssel signiert, siehe unten).
 
 Voraussetzung: Android 8.0 oder neuer.
 

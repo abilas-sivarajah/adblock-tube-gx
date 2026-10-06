@@ -50,6 +50,9 @@ jobs:
           GXTUBE_ONLINE_TESTS: '1'
         run: ./gradlew testDebugUnitTest --tests 'de.abilas.gxtube.OnlineSmokeTest' --rerun
 
+      - name: Änderung für die Release-Notiz
+        run: echo "CHANGES=$(git log -1 --format=%s | tr -d '\r')" >> "$GITHUB_ENV"
+
       - name: Release veröffentlichen
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
@@ -59,10 +62,13 @@ jobs:
           make_latest: true
           files: GXTube-*.apk
           body: |
+            Neu: ${{ env.CHANGES }}
+
             **Installieren:** `GXTube-${{ env.GXTUBE_VERSION_NAME }}.apk` unten auf dem Handy herunterladen und öffnen.
             Beim ersten Mal fragt Android, ob der Browser Apps installieren darf → erlauben.
 
-            Updates lassen sich einfach drüber installieren – Abos und Verlauf bleiben erhalten.
+            Ab Version 0.1.5 meldet GX Tube neue Versionen selbst und installiert sie direkt in der App.
+            Updates lassen sich auch einfach drüber installieren – Abos und Verlauf bleiben erhalten.
 
             Stand: ${{ github.sha }}
 

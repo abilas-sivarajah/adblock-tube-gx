@@ -154,6 +154,7 @@ fun AppRoot(inPip: Boolean) {
                     }
                 }
                 WatchOverlay(inPip = inPip, fullscreen = fullscreen)
+                if (!inPip) UpdateDialog()
                 SnackbarHost(
                     hostState = snackbar,
                     modifier = Modifier

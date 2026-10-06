@@ -56,6 +56,8 @@ data class Settings(
     val shortsOnHome: Boolean = true,
     /** Aus = Shorts überall ausblenden (Tab, Startseite, Suche, Abos, Kanäle …) */
     val shortsEnabled: Boolean = true,
+    /** Beim Öffnen der App auf GitHub nach einer neuen Version suchen */
+    val autoUpdateCheck: Boolean = true,
 )
 
 /** Shorts herausfiltern, wenn sie in den Einstellungen ausgeschaltet sind. */

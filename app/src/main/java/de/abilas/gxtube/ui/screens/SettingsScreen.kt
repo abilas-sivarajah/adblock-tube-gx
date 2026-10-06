@@ -26,6 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import de.abilas.gxtube.update.Updater
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +58,7 @@ fun SettingsScreen() {
     val lib by Library.data.collectAsStateWithLifecycle()
     val s = lib.settings
     var dialog by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     Column(Modifier.fillMaxSize()) {
         BackTopBar("Einstellungen")
@@ -140,6 +144,22 @@ fun SettingsScreen() {
             item { ChoiceRow("Darstellung", themes[s.theme] ?: s.theme) { dialog = "theme" } }
 
             item { Header("Über") }
+            item {
+                SwitchRow("Automatisch nach Updates suchen", "Beim Öffnen der App auf GitHub nachsehen", s.autoUpdateCheck) {
+                    Library.updateSettings { st -> st.copy(autoUpdateCheck = it) }
+                }
+            }
+            item {
+                val update by Updater.state.collectAsStateWithLifecycle()
+                ChoiceRow(
+                    "Nach Updates suchen",
+                    when (update) {
+                        is Updater.State.Checking -> "Wird geprüft …"
+                        is Updater.State.UpToDate -> "Du hast die neueste Version (${Updater.currentVersion})"
+                        else -> "Installiert: ${Updater.currentVersion}"
+                    },
+                ) { scope.launch { Updater.checkNow() } }
+            }
             item {
                 Text(
                     "GX Tube ${BuildConfig.VERSION_NAME}\n" +

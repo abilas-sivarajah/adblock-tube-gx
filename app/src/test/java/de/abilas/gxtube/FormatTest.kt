@@ -5,6 +5,7 @@ import de.abilas.gxtube.data.VideoItem
 import de.abilas.gxtube.data.filterShorts
 import de.abilas.gxtube.data.channelKey
 import de.abilas.gxtube.data.videoIdOf
+import de.abilas.gxtube.update.Updater
 import de.abilas.gxtube.util.Fmt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -75,5 +76,13 @@ class FormatTest {
         val list = listOf(normal, short, tagged)
         assertEquals(list, list.filterShorts(enabled = true))
         assertEquals(listOf(normal), list.filterShorts(enabled = false))
+    }
+
+    @Test
+    fun versionCompare() {
+        assertEquals(true, Updater.isNewer("0.1.10", "0.1.9"))
+        assertEquals(true, Updater.isNewer("v0.2.0", "0.1.99"))
+        assertEquals(false, Updater.isNewer("0.1.5", "0.1.5"))
+        assertEquals(false, Updater.isNewer("0.1.4", "0.1.5-debug"))
     }
 }

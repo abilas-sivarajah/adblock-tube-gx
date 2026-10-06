@@ -29,6 +29,7 @@ import de.abilas.gxtube.player.PlayerMode
 import de.abilas.gxtube.ui.AppRoot
 import de.abilas.gxtube.ui.IntentRouter
 import de.abilas.gxtube.ui.ShortsLaunch
+import de.abilas.gxtube.update.Updater
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -77,6 +78,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         PlayerController.onAppForeground()
+        Updater.checkOnOpen(this, lifecycleScope)
     }
 
     override fun onStop() {
