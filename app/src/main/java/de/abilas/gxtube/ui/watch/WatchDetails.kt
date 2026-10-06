@@ -104,6 +104,11 @@ fun WatchDetails(n: NowPlaying) {
         contentPadding = PaddingValues(bottom = 24.dp + navBottom),
         modifier = Modifier.fillMaxSize(),
     ) {
+        // Ohne Titel (z. B. Link geöffnet und Laden fehlgeschlagen) nur Fehler/Laden im Player zeigen
+        if (n.video.title.isBlank()) {
+            if (n.loading) item(key = "loading") { LoadingBox() }
+            return@LazyColumn
+        }
         item(key = "title") {
             Column(
                 Modifier
@@ -277,9 +282,6 @@ fun WatchDetails(n: NowPlaying) {
             CommentsTeaser(comments) { showComments = true }
         }
         if (n.loading) item(key = "loading") { LoadingBox() }
-        if (n.error != null && !n.loading) {
-            item(key = "error") { ErrorBox(n.error, onRetry = { PlayerController.retry() }) }
-        }
         items(n.related.filter { it.id !in lib.hidden }, key = { "rel-" + it.id }) { v ->
             VideoCard(v, onClick = { nav.openVideo(v) })
         }

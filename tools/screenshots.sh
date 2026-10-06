@@ -7,12 +7,18 @@ OUT="$2"
 PKG=de.abilas.gxtube
 mkdir -p "$OUT"
 
+# Systemdialoge (z. B. "Pixel Launcher isn't responding" im langsamen Emulator) ausblenden
+adb shell settings put global hide_error_dialogs 1 || true
+adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS || true
+
 adb install -r "$APK"
 adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS || true
 adb logcat -c || true
 
 shot() {
   sleep "${2:-8}"
+  adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null 2>&1 || true
+  sleep 1
   adb exec-out screencap -p > "$OUT/$1.png"
 }
 route() { adb shell am start -n "$PKG/.MainActivity" --es gxtube_route "$1"; }
