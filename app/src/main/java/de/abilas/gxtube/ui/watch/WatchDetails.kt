@@ -133,7 +133,7 @@ fun WatchDetails(n: NowPlaying) {
             }
         }
         item(key = "channel") {
-            val subs = n.info?.uploaderSubscriberCount ?: -1
+            val subs = n.info?.uploaderSubscriberCount ?: -1L
             val subscribed = Library.isSubscribed(lib, n.video.channelUrl)
             Row(
                 Modifier

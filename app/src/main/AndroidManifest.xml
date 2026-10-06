@@ -45,6 +45,7 @@
                 <data android:host="m.youtube.com" />
                 <data android:host="music.youtube.com" />
                 <data android:pathPrefix="/watch" />
+                <data android:pathPrefix="/results" />
                 <data android:pathPrefix="/shorts" />
                 <data android:pathPrefix="/live" />
                 <data android:pathPrefix="/playlist" />

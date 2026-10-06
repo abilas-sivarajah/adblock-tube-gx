@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Rational
@@ -87,11 +88,18 @@ class MainActivity : ComponentActivity() {
     // ------------------------------------------------------------ Links aus anderen Apps
 
     private fun handleIntent(intent: Intent?) {
+        // z. B. adb shell am start -n de.abilas.gxtube/.MainActivity --es gxtube_route subscriptions
+        intent?.getStringExtra("gxtube_route")?.let {
+            IntentRouter.pending.value = "route:$it"
+            return
+        }
         val text = intent?.dataString ?: intent?.getStringExtra(Intent.EXTRA_TEXT) ?: return
         val url = Regex("""https?://\S+""").find(text)?.value ?: text.trim()
         val id = videoIdOf(url)
         val seconds = Regex("""[?&#]t=(\d+)""").find(url)?.groupValues?.get(1)?.toLongOrNull()
+        val search = Regex("""[?&]search_query=([^&]+)""").find(url)?.groupValues?.get(1)
         when {
+            search != null -> IntentRouter.pending.value = "search:" + Uri.decode(search.replace('+', ' '))
             url.contains("/playlist") && url.contains("list=") -> IntentRouter.pending.value = "playlist:$url"
             id != null && url.contains("/shorts/") -> {
                 ShortsLaunch.start.value = VideoItem(id = id, title = "", isShort = true)

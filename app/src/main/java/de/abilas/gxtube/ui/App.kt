@@ -120,6 +120,12 @@ fun AppRoot(inPip: Boolean) {
                 when {
                     target.startsWith("channel:") -> nav.openChannel(target.removePrefix("channel:"))
                     target.startsWith("playlist:") -> nav.openPlaylist(target.removePrefix("playlist:"))
+                    target.startsWith("search:") -> nav.openSearch(target.removePrefix("search:"))
+                    target.startsWith("route:") -> when (val r = target.removePrefix("route:")) {
+                        in Routes.tabs -> nav.openTab(r)
+                        "settings" -> nav.openSettings()
+                        else -> nav.openLibrary(r)
+                    }
                     target == "shorts" -> nav.openTab(Routes.SHORTS)
                 }
             }
