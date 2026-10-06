@@ -38,11 +38,13 @@ Voraussetzung: Android 8.0 oder neuer.
 | **Suche** | Vorschläge, Suchverlauf, Filter (Videos, Kanäle, Playlists), „Meintest du …“ |
 | **Kanäle & Playlists** | Banner, Abonnieren, Tabs (Videos, Shorts, Live, Playlists), „Alle abspielen“, Zufallsmix |
 | **Du** | Verlauf mit rotem Fortschrittsbalken („Weiter ansehen“), Später ansehen, Videos mit „Mag ich“ |
+| **Google-Konto (freiwillig)** | Anmelden unter **Du → Mit Google anmelden**: deine echte YouTube-Startseite, Abos aus dem Konto, Verlauf / Später ansehen / „Mag ich“ von YouTube; Abonnieren, Liken und Speichern landen im Konto. Videos laufen trotzdem ohne Werbung. |
 | **Links öffnen** | YouTube-Links aus anderen Apps über „Teilen → GX Tube“ öffnen (auch `youtu.be`, Shorts, Kanäle, Playlists, `?t=` Zeitstempel) |
 | **Design** | Wie die YouTube-App, hell/dunkel (folgt dem System oder fest einstellbar) |
 
-Ohne Google-Konto: Abos, Verlauf, Likes und Einstellungen liegen nur auf dem Handy
-(`files/library.json`). „Mag ich“ wird nicht an YouTube gesendet.
+Ohne Anmeldung liegen Abos, Verlauf, Likes und Einstellungen nur auf dem Handy (`files/library.json`).
+Mit Anmeldung speichert GX Tube nur die youtube.com-Cookies (`files/account.json`, nicht dein Passwort)
+und schickt Abonnieren / „Mag ich“ / „Später ansehen“ zusätzlich an dein Konto.
 
 ## 🔁 YouTube-Abos übernehmen
 
@@ -53,8 +55,9 @@ Ohne Google-Konto: Abos, Verlauf, Likes und Einstellungen liegen nur auf dem Han
 
 ## ⚠️ Grenzen
 
-- **Kein Google-Login**: keine persönlichen YouTube-Empfehlungen, kein Kommentieren, keine
-  altersbeschränkten Videos, keine Mitglieder-Videos.
+- **Google-Anmeldung ist inoffiziell** (wie bei Grayjay oder Metrolist): Google erlaubt Apps von Dritten
+  das eigentlich nicht. Sperren sind selten, aber möglich – wer sicher gehen will, nimmt ein Zweitkonto.
+  Kommentieren, altersbeschränkte Videos und das Melden des Verlaufs an YouTube gehen (noch) nicht.
 - YouTube ändert regelmäßig seine Schnittstellen. Wenn Videos plötzlich nicht mehr laden, hilft meist
   eine neuere Version von NewPipe Extractor (`gradle/libs.versions.toml` → `newpipeExtractor` auf den
   Stand von NewPipe setzen) – dann baut GitHub automatisch eine neue APK.
@@ -101,6 +104,7 @@ app/src/main/java/de/abilas/gxtube/
 │   ├── YouTubeRepo.kt               # alle YouTube-Abfragen (NewPipe Extractor)
 │   ├── Feeds.kt                     # Abo-Feed, Startseiten-Mix, Shorts
 │   ├── Library.kt                   # Abos, Verlauf, Später ansehen, Likes, Einstellungen (lokal)
+│   ├── Account.kt / Sync.kt         # freiwillige Google-Anmeldung, Abgleich mit dem Konto
 │   ├── SponsorBlock.kt              # gesponserte Abschnitte
 │   ├── Http.kt / Models.kt
 ├── player/

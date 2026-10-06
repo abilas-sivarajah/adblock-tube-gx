@@ -57,12 +57,14 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import de.abilas.gxtube.R
 import de.abilas.gxtube.data.Library
+import de.abilas.gxtube.data.Sync
 import de.abilas.gxtube.player.PlayerController
 import de.abilas.gxtube.player.PlayerMode
 import de.abilas.gxtube.ui.components.LocalWatchProgress
 import de.abilas.gxtube.ui.screens.ChannelScreen
 import de.abilas.gxtube.ui.screens.HomeScreen
 import de.abilas.gxtube.ui.screens.LibraryScreen
+import de.abilas.gxtube.ui.screens.LoginScreen
 import de.abilas.gxtube.ui.screens.ManageSubscriptionsScreen
 import de.abilas.gxtube.ui.screens.PlaylistScreen
 import de.abilas.gxtube.ui.screens.SearchScreen
@@ -112,6 +114,9 @@ fun AppRoot(inPip: Boolean) {
 
         LaunchedEffect(Unit) {
             PlayerController.messages.collect { snackbar.showSnackbar(it) }
+        }
+        LaunchedEffect(Unit) {
+            Sync.messages.collect { snackbar.showSnackbar(it) }
         }
         LaunchedEffect(Unit) {
             IntentRouter.pending.collect { target ->
@@ -200,6 +205,7 @@ private fun AppNavHost(navController: androidx.navigation.NavHostController) {
         composable(Routes.LIBRARY) { entry -> LibraryScreen(entry.arguments?.getString("kind").orEmpty()) }
         composable(Routes.SETTINGS) { SettingsScreen() }
         composable(Routes.MANAGE_SUBS) { ManageSubscriptionsScreen() }
+        composable(Routes.LOGIN) { LoginScreen() }
     }
 }
 

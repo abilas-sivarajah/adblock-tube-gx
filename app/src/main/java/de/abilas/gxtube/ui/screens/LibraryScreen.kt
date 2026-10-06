@@ -30,6 +30,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import de.abilas.gxtube.data.Account
+import de.abilas.gxtube.data.VideoItem
+import de.abilas.gxtube.ui.components.Chip
+import de.abilas.gxtube.ui.components.ErrorBox
+import de.abilas.gxtube.ui.components.LoadMoreEffect
+import de.abilas.gxtube.ui.components.LoadingBox
+import de.abilas.gxtube.ui.components.PagedList
 import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.ui.LocalNav
 import de.abilas.gxtube.ui.components.Avatar
@@ -42,12 +54,33 @@ import de.abilas.gxtube.ui.components.VideoRow
 import de.abilas.gxtube.ui.theme.Yt
 import de.abilas.gxtube.player.PlayerController
 
+class AccountListViewModel(kind: String) : ViewModel() {
+    val list = PagedList<VideoItem>(viewModelScope) { it.id }
+
+    init {
+        list.start {
+            when (kind) {
+                "later" -> Account.playlist("WL")
+                "liked" -> Account.playlist("LL")
+                else -> Account.history()
+            }
+        }
+    }
+}
+
 /** Verlauf, "Später ansehen" und "Mag ich". */
 @Composable
 fun LibraryScreen(kind: String) {
     val nav = LocalNav.current
     val lib by Library.data.collectAsStateWithLifecycle()
+    val account by Account.state.collectAsStateWithLifecycle()
     var confirmClear by remember { mutableStateOf(false) }
+    var fromAccount by rememberSaveable { mutableStateOf(true) }
+
+    if (account != null && fromAccount) {
+        AccountList(kind, onLocal = { fromAccount = false })
+        return
+    }
 
     val title = when (kind) {
         "later" -> "Später ansehen"
@@ -66,6 +99,7 @@ fun LibraryScreen(kind: String) {
                 TextButton(onClick = { confirmClear = true }) { Text("Löschen", color = Yt.colors.text) }
             }
         }
+        if (account != null) SourceChips(fromAccount = false) { fromAccount = it }
         if (videos.isEmpty()) {
             EmptyBox(
                 when (kind) {
@@ -153,8 +187,63 @@ fun ManageSubscriptionsScreen() {
                     Avatar(s.avatar, s.name, 40.dp)
                     Spacer(Modifier.width(16.dp))
                     Text(s.name, fontSize = 15.sp, color = Yt.colors.text, modifier = Modifier.weight(1f), maxLines = 1)
-                    SubscribeButton(subscribed = true, small = true) { Library.unsubscribe(s.url) }
+                    SubscribeButton(subscribed = true, small = true) { Library.toggleSubscription(s.url, s.name, s.avatar) }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SourceChips(fromAccount: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+    ) {
+        Chip("YouTube-Konto", fromAccount, { onChange(true) })
+        Chip("Auf diesem Handy", !fromAccount, { onChange(false) })
+    }
+}
+
+/** Liste direkt aus dem YouTube-Konto. */
+@Composable
+private fun AccountList(kind: String, onLocal: () -> Unit) {
+    val nav = LocalNav.current
+    val vm: AccountListViewModel = viewModel(key = "account-$kind") { AccountListViewModel(kind) }
+    val listState = rememberLazyListState()
+    val videos = vm.list.items
+    LoadMoreEffect(listState, enabled = vm.list.hasMore) { vm.list.loadMore() }
+    Column(Modifier.fillMaxSize()) {
+        BackTopBar(
+            when (kind) {
+                "later" -> "Später ansehen"
+                "liked" -> "Videos mit \"Mag ich\""
+                else -> "Verlauf"
+            },
+        )
+        SourceChips(fromAccount = true) { if (!it) onLocal() }
+        LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 80.dp)) {
+            if (kind != "history" && videos.isNotEmpty()) {
+                item {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("${videos.size}${if (vm.list.hasMore) "+" else ""} Videos", color = Yt.colors.textSecondary, modifier = Modifier.weight(1f))
+                        PrimaryPill("Alle abspielen", onClick = { PlayerController.play(videos.first(), videos) })
+                    }
+                }
+            }
+            itemsIndexed(videos, key = { _, v -> v.id }) { index, v ->
+                VideoRow(
+                    v,
+                    onClick = { if (kind == "history") nav.openVideo(v) else PlayerController.play(v, videos) },
+                    index = if (kind == "history") null else index + 1,
+                )
+            }
+            if (vm.list.loading) item { LoadingBox() }
+            if (!vm.list.loading && vm.list.error != null && videos.isEmpty()) {
+                item { ErrorBox(vm.list.error.orEmpty(), onRetry = { vm.list.reload(false) }) }
+            }
+            if (!vm.list.loading && vm.list.error == null && videos.isEmpty()) {
+                item { ErrorBox("Diese Liste ist in deinem Konto leer.", null) }
             }
         }
     }

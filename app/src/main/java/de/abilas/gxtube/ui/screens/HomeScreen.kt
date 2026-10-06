@@ -39,7 +39,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.abilas.gxtube.R
+import de.abilas.gxtube.data.Account
 import de.abilas.gxtube.data.HomeFeed
+import de.abilas.gxtube.data.Sync
 import de.abilas.gxtube.data.Kiosk
 import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.data.ShortsFeed
@@ -68,6 +70,7 @@ class HomeViewModel : ViewModel() {
     val list = PagedList<VideoItem>(viewModelScope) { it.id }
 
     init {
+        Sync.importSubscriptionsInBackground()
         viewModelScope.launch { runCatching { SubscriptionFeed.refresh() } }
         select(null)
         viewModelScope.launch { runCatching { ShortsFeed.ensureLoaded() } }
@@ -75,7 +78,15 @@ class HomeViewModel : ViewModel() {
 
     fun select(kiosk: Kiosk?) {
         category = kiosk
-        list.start { if (kiosk == null) HomeFeed.mixed() else YouTubeRepo.kiosk(kiosk) }
+        list.start {
+            when {
+                kiosk != null -> YouTubeRepo.kiosk(kiosk)
+                // Angemeldet: deine echte YouTube-Startseite, sonst die eigene Mischung
+                Account.loggedIn -> runCatching { Account.home() }
+                    .getOrNull()?.takeIf { it.items.isNotEmpty() } ?: HomeFeed.mixed()
+                else -> HomeFeed.mixed()
+            }
+        }
     }
 
     fun refresh() {

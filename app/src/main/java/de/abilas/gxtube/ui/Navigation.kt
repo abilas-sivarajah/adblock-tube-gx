@@ -20,6 +20,7 @@ object Routes {
     const val LIBRARY = "library/{kind}"
     const val SETTINGS = "settings"
     const val MANAGE_SUBS = "manage_subscriptions"
+    const val LOGIN = "login"
 
     val tabs = listOf(HOME, SHORTS, SUBSCRIPTIONS, YOU)
 }
@@ -54,6 +55,7 @@ class AppNav(private val nav: NavHostController) {
     fun openLibrary(kind: String) = nav.navigate("library/$kind")
     fun openSettings() = nav.navigate(Routes.SETTINGS)
     fun openManageSubscriptions() = nav.navigate(Routes.MANAGE_SUBS)
+    fun openLogin() = nav.navigate(Routes.LOGIN)
 
     fun openTab(route: String) {
         nav.navigate(route) {

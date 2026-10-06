@@ -145,7 +145,9 @@ object Library {
     }
 
     fun toggleSubscription(url: String, name: String, avatar: String?) {
-        if (isSubscribed(_data.value, url)) unsubscribe(url) else subscribe(url, name, avatar)
+        val subscribed = !isSubscribed(_data.value, url)
+        if (subscribed) subscribe(url, name, avatar) else unsubscribe(url)
+        Sync.subscription(url, subscribed)
     }
 
     fun addSubscriptions(items: List<Subscription>): Int {
@@ -194,21 +196,33 @@ object Library {
 
     fun isInWatchLater(data: LibraryData, id: String) = data.watchLater.any { it.id == id }
 
-    fun toggleWatchLater(video: VideoItem) = update { d ->
-        if (d.watchLater.any { it.id == video.id }) d.copy(watchLater = d.watchLater.filterNot { it.id == video.id })
-        else d.copy(watchLater = listOf(video) + d.watchLater)
+    fun toggleWatchLater(video: VideoItem) {
+        val add = !isInWatchLater(_data.value, video.id)
+        update { d ->
+            if (!add) d.copy(watchLater = d.watchLater.filterNot { it.id == video.id })
+            else d.copy(watchLater = listOf(video) + d.watchLater)
+        }
+        Sync.watchLater(video.id, add)
     }
 
     fun isLiked(data: LibraryData, id: String) = data.liked.any { it.id == id }
 
-    fun toggleLike(video: VideoItem) = update { d ->
-        if (d.liked.any { it.id == video.id }) d.copy(liked = d.liked.filterNot { it.id == video.id })
-        else d.copy(liked = listOf(video) + d.liked, disliked = d.disliked - video.id)
+    fun toggleLike(video: VideoItem) {
+        val like = !isLiked(_data.value, video.id)
+        update { d ->
+            if (!like) d.copy(liked = d.liked.filterNot { it.id == video.id })
+            else d.copy(liked = listOf(video) + d.liked, disliked = d.disliked - video.id)
+        }
+        Sync.rating(video.id, if (like) Account.Rating.LIKE else Account.Rating.NONE)
     }
 
-    fun toggleDislike(video: VideoItem) = update { d ->
-        if (video.id in d.disliked) d.copy(disliked = d.disliked - video.id)
-        else d.copy(disliked = d.disliked + video.id, liked = d.liked.filterNot { it.id == video.id })
+    fun toggleDislike(video: VideoItem) {
+        val dislike = video.id !in _data.value.disliked
+        update { d ->
+            if (!dislike) d.copy(disliked = d.disliked - video.id)
+            else d.copy(disliked = d.disliked + video.id, liked = d.liked.filterNot { it.id == video.id })
+        }
+        Sync.rating(video.id, if (dislike) Account.Rating.DISLIKE else Account.Rating.NONE)
     }
 
     fun hide(video: VideoItem) = update { d ->

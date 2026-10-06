@@ -137,6 +137,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.newpipe.extractor)
+    implementation(libs.nanojson)
 
     testImplementation(libs.junit)
 }

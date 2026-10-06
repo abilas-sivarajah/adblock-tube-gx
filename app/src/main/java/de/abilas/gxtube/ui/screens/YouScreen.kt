@@ -60,6 +60,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.outlined.Refresh
+import de.abilas.gxtube.data.Account
+import de.abilas.gxtube.data.Sync
+import de.abilas.gxtube.ui.components.Avatar
+import de.abilas.gxtube.ui.components.PillButton
+import de.abilas.gxtube.ui.components.PrimaryPill
+import de.abilas.gxtube.util.Fmt
 import de.abilas.gxtube.BuildConfig
 import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.data.SubscriptionFeed
@@ -81,6 +89,8 @@ fun YouScreen() {
     val scope = rememberCoroutineScope()
     var importing by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
+    var showLogout by remember { mutableStateOf(false) }
+    val account by Account.state.collectAsStateWithLifecycle()
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -130,26 +140,64 @@ fun YouScreen() {
                     .padding(start = 16.dp, end = 4.dp, top = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(YtColors.Red, YtColors.Cyan))),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("Du", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                val acc = account
+                if (acc != null) {
+                    Avatar(acc.avatar, acc.name ?: "Du", 64.dp)
+                } else {
+                    Box(
+                        Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(Brush.linearGradient(listOf(YtColors.Red, YtColors.Cyan))),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("Du", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Du", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Yt.colors.text)
                     Text(
-                        "Lokales Profil · ohne Google-Konto · werbefrei",
+                        acc?.name ?: "Du",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Yt.colors.text,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        if (acc != null) Fmt.joinDot(acc.handle, "mit YouTube verbunden")
+                        else "Lokales Profil · ohne Google-Konto · werbefrei",
                         fontSize = 12.sp,
                         color = Yt.colors.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 IconButton(onClick = { nav.openSettings() }) {
                     Icon(Icons.Outlined.Settings, "Einstellungen", tint = Yt.colors.text)
+                }
+            }
+        }
+        item {
+            Row(
+                Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (account == null) {
+                    PrimaryPill("Mit Google anmelden", onClick = { nav.openLogin() })
+                } else {
+                    PillButton("Abos abgleichen", Icons.Outlined.Refresh, {
+                        scope.launch {
+                            val r = runCatching { Sync.importSubscriptions() }
+                            Toast.makeText(
+                                context,
+                                r.fold({ "$it neue Abos aus dem Konto übernommen" }, { "Abgleich fehlgeschlagen: ${it.message}" }),
+                                Toast.LENGTH_LONG,
+                            ).show()
+                            if ((r.getOrNull() ?: 0) > 0) SubscriptionFeed.refresh(force = true)
+                        }
+                    })
+                    PillButton("Abmelden", Icons.AutoMirrored.Outlined.Logout, { showLogout = true })
                 }
             }
         }
@@ -229,6 +277,21 @@ fun YouScreen() {
                 modifier = Modifier.padding(16.dp),
             )
         }
+    }
+
+    if (showLogout) {
+        AlertDialog(
+            onDismissRequest = { showLogout = false },
+            title = { Text("Abmelden?") },
+            text = { Text("GX Tube vergisst die Anmeldung. Deine Abos und Listen auf diesem Handy bleiben erhalten.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    logoutEverywhere()
+                    showLogout = false
+                }) { Text("Abmelden") }
+            },
+            dismissButton = { TextButton(onClick = { showLogout = false }) { Text("Abbrechen") } },
+        )
     }
 
     if (showHelp) {

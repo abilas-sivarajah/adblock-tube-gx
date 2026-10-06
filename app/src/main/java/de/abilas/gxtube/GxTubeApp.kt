@@ -5,6 +5,7 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.request.crossfade
+import de.abilas.gxtube.data.Account
 import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.data.NewPipeDownloader
 import de.abilas.gxtube.data.SubscriptionFeed
@@ -18,6 +19,7 @@ class GxTubeApp : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         Library.init(this)
+        Account.init(this)
         SubscriptionFeed.init(this)
         applyRegion()
         PlayerController.init(this)
