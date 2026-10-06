@@ -65,6 +65,7 @@ import de.abilas.gxtube.data.Comment
 import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.data.Paged
 import de.abilas.gxtube.data.YouTubeRepo
+import de.abilas.gxtube.data.filterShorts
 import de.abilas.gxtube.player.NowPlaying
 import de.abilas.gxtube.player.PlayerController
 import de.abilas.gxtube.ui.LocalNav
@@ -282,7 +283,7 @@ fun WatchDetails(n: NowPlaying) {
             CommentsTeaser(comments) { showComments = true }
         }
         if (n.loading) item(key = "loading") { LoadingBox() }
-        items(n.related.filter { it.id !in lib.hidden }, key = { "rel-" + it.id }) { v ->
+        items(n.related.filter { it.id !in lib.hidden }.filterShorts(lib.settings.shortsEnabled), key = { "rel-" + it.id }) { v ->
             VideoCard(v, onClick = { nav.openVideo(v) })
         }
     }

@@ -102,8 +102,18 @@ fun SettingsScreen() {
             item { ChoiceRow("Land (Trends, Inhalte)", countries[s.country] ?: s.country) { dialog = "country" } }
             item { ChoiceRow("Sprache (Datumsangaben, Titel)", languages[s.language] ?: s.language) { dialog = "language" } }
             item {
-                SwitchRow("Shorts auf der Startseite", null, s.shortsOnHome) {
-                    Library.updateSettings { st -> st.copy(shortsOnHome = it) }
+                SwitchRow(
+                    "Shorts anzeigen",
+                    if (s.shortsEnabled) "Aus = Shorts überall ausblenden: Tab, Startseite, Abos, Suche, Kanäle, ähnliche Videos"
+                    else "Shorts sind komplett ausgeblendet",
+                    s.shortsEnabled,
+                ) { Library.updateSettings { st -> st.copy(shortsEnabled = it) } }
+            }
+            if (s.shortsEnabled) {
+                item {
+                    SwitchRow("Shorts-Leiste auf der Startseite", null, s.shortsOnHome) {
+                        Library.updateSettings { st -> st.copy(shortsOnHome = it) }
+                    }
                 }
             }
 

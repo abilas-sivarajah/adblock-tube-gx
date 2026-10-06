@@ -127,11 +127,12 @@ fun AppRoot(inPip: Boolean) {
                     target.startsWith("playlist:") -> nav.openPlaylist(target.removePrefix("playlist:"))
                     target.startsWith("search:") -> nav.openSearch(target.removePrefix("search:"))
                     target.startsWith("route:") -> when (val r = target.removePrefix("route:")) {
+                        Routes.SHORTS -> if (Library.settings.shortsEnabled) nav.openTab(r)
                         in Routes.tabs -> nav.openTab(r)
                         "settings" -> nav.openSettings()
                         else -> nav.openLibrary(r)
                     }
-                    target == "shorts" -> nav.openTab(Routes.SHORTS)
+                    target == "shorts" -> if (Library.settings.shortsEnabled) nav.openTab(Routes.SHORTS)
                 }
             }
         }
@@ -148,7 +149,7 @@ fun AppRoot(inPip: Boolean) {
                             AppNavHost(navController)
                         }
                         if (!fullscreen) {
-                            BottomBar(route) { nav.openTab(it) }
+                            BottomBar(route, lib.settings.shortsEnabled) { nav.openTab(it) }
                         }
                     }
                 }
@@ -210,7 +211,7 @@ private fun AppNavHost(navController: androidx.navigation.NavHostController) {
 }
 
 @Composable
-private fun BottomBar(route: String?, onSelect: (String) -> Unit) {
+private fun BottomBar(route: String?, shortsEnabled: Boolean, onSelect: (String) -> Unit) {
     val c = Yt.colors
     Column(Modifier.background(c.background)) {
         HorizontalDivider(color = c.divider, thickness = 0.5.dp)
@@ -221,8 +222,10 @@ private fun BottomBar(route: String?, onSelect: (String) -> Unit) {
         ) {
             BottomItem("Startseite", route == Routes.HOME,
                 rememberVectorPainter(Icons.Filled.Home), rememberVectorPainter(Icons.Outlined.Home)) { onSelect(Routes.HOME) }
-            BottomItem("Shorts", route == Routes.SHORTS,
-                painterResource(R.drawable.ic_shorts_filled), painterResource(R.drawable.ic_shorts)) { onSelect(Routes.SHORTS) }
+            if (shortsEnabled) {
+                BottomItem("Shorts", route == Routes.SHORTS,
+                    painterResource(R.drawable.ic_shorts_filled), painterResource(R.drawable.ic_shorts)) { onSelect(Routes.SHORTS) }
+            }
             BottomItem("Abos", route == Routes.SUBSCRIPTIONS,
                 rememberVectorPainter(Icons.Filled.Subscriptions), rememberVectorPainter(Icons.Outlined.Subscriptions)) { onSelect(Routes.SUBSCRIPTIONS) }
             BottomItem("Du", route == Routes.YOU,

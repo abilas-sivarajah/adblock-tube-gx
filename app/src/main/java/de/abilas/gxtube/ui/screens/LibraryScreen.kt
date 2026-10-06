@@ -43,6 +43,7 @@ import de.abilas.gxtube.ui.components.LoadMoreEffect
 import de.abilas.gxtube.ui.components.LoadingBox
 import de.abilas.gxtube.ui.components.PagedList
 import de.abilas.gxtube.data.Library
+import de.abilas.gxtube.data.filterShorts
 import de.abilas.gxtube.ui.LocalNav
 import de.abilas.gxtube.ui.components.Avatar
 import de.abilas.gxtube.ui.components.BackTopBar
@@ -91,7 +92,7 @@ fun LibraryScreen(kind: String) {
         "later" -> lib.watchLater
         "liked" -> lib.liked
         else -> lib.history.map { it.video }
-    }
+    }.filterShorts(lib.settings.shortsEnabled)
 
     Column(Modifier.fillMaxSize()) {
         BackTopBar(title) {
@@ -211,7 +212,8 @@ private fun AccountList(kind: String, onLocal: () -> Unit) {
     val nav = LocalNav.current
     val vm: AccountListViewModel = viewModel(key = "account-$kind") { AccountListViewModel(kind) }
     val listState = rememberLazyListState()
-    val videos = vm.list.items
+    val lib by Library.data.collectAsStateWithLifecycle()
+    val videos = vm.list.items.filterShorts(lib.settings.shortsEnabled)
     LoadMoreEffect(listState, enabled = vm.list.hasMore) { vm.list.loadMore() }
     Column(Modifier.fillMaxSize()) {
         BackTopBar(

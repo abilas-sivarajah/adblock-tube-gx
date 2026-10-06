@@ -27,6 +27,10 @@ data class VideoItem(
     val url: String get() = "https://www.youtube.com/watch?v=$id"
     val shareUrl: String get() = if (isShort) "https://youtube.com/shorts/$id" else "https://youtu.be/$id"
     val thumbnailOrDefault: String get() = thumbnail ?: "https://i.ytimg.com/vi/$id/hqdefault.jpg"
+
+    /** Als Short markiert oder offensichtlich einer (#shorts im Titel, höchstens 3 Minuten) */
+    val looksLikeShort: Boolean
+        get() = isShort || (title.contains("#shorts", ignoreCase = true) && durationSec in 0..180)
 }
 
 @Serializable

@@ -54,7 +54,13 @@ data class Settings(
     val historyEnabled: Boolean = true,
     val searchHistoryEnabled: Boolean = true,
     val shortsOnHome: Boolean = true,
+    /** Aus = Shorts überall ausblenden (Tab, Startseite, Suche, Abos, Kanäle …) */
+    val shortsEnabled: Boolean = true,
 )
+
+/** Shorts herausfiltern, wenn sie in den Einstellungen ausgeschaltet sind. */
+fun List<VideoItem>.filterShorts(enabled: Boolean = Library.settings.shortsEnabled): List<VideoItem> =
+    if (enabled) this else filterNot { it.looksLikeShort }
 
 @Serializable
 data class LibraryData(

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation.NavHostController
+import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.data.VideoItem
 import de.abilas.gxtube.player.PlayerController
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +30,7 @@ object Routes {
 class AppNav(private val nav: NavHostController) {
 
     fun openVideo(video: VideoItem, queue: List<VideoItem> = emptyList()) {
-        if (video.isShort && queue.isEmpty()) {
+        if (video.isShort && queue.isEmpty() && Library.settings.shortsEnabled) {
             ShortsLaunch.start.value = video
             openTab(Routes.SHORTS)
         } else {

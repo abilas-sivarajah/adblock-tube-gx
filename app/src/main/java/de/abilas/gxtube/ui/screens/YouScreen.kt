@@ -206,7 +206,7 @@ fun YouScreen() {
             SectionHeader("Verlauf", action = "Alle ansehen", onAction = { nav.openLibrary("history") })
         }
         item {
-            val history = lib.history.take(20)
+            val history = lib.history.filter { lib.settings.shortsEnabled || !it.video.looksLikeShort }.take(20)
             if (history.isEmpty()) {
                 Text(
                     "Hier erscheinen Videos, die du ansiehst.",

@@ -1,6 +1,8 @@
 package de.abilas.gxtube
 
 import de.abilas.gxtube.data.HomeFeed
+import de.abilas.gxtube.data.VideoItem
+import de.abilas.gxtube.data.filterShorts
 import de.abilas.gxtube.data.channelKey
 import de.abilas.gxtube.data.videoIdOf
 import de.abilas.gxtube.util.Fmt
@@ -63,5 +65,15 @@ class FormatTest {
     fun interleave() {
         val mixed = HomeFeed.interleave(listOf(listOf(1, 2, 3, 4), listOf(10, 20)), weights = listOf(2, 1))
         assertEquals(listOf(1, 2, 10, 3, 4, 20), mixed)
+    }
+
+    @Test
+    fun shortsFilter() {
+        val normal = VideoItem(id = "aaaaaaaaaaa", title = "Langes Video", durationSec = 600)
+        val short = VideoItem(id = "bbbbbbbbbbb", title = "Kurz", isShort = true)
+        val tagged = VideoItem(id = "ccccccccccc", title = "Witzig #Shorts", durationSec = 45)
+        val list = listOf(normal, short, tagged)
+        assertEquals(list, list.filterShorts(enabled = true))
+        assertEquals(listOf(normal), list.filterShorts(enabled = false))
     }
 }

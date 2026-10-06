@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Rational
 import android.view.OrientationEventListener
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -40,7 +41,10 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     private val pipListener = object : Player.Listener {
-        override fun onIsPlayingChanged(isPlaying: Boolean) = updatePip()
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            updatePip()
+            updateKeepScreenOn()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,7 +58,10 @@ class MainActivity : ComponentActivity() {
         PlayerController.player.addListener(pipListener)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                combine(PlayerController.now, PlayerController.mode) { _, _ -> }.collect { updatePip() }
+                combine(PlayerController.now, PlayerController.mode) { _, _ -> }.collect {
+                    updatePip()
+                    updateKeepScreenOn()
+                }
             }
         }
         lifecycleScope.launch {
@@ -101,7 +108,7 @@ class MainActivity : ComponentActivity() {
         when {
             search != null -> IntentRouter.pending.value = "search:" + Uri.decode(search.replace('+', ' '))
             url.contains("/playlist") && url.contains("list=") -> IntentRouter.pending.value = "playlist:$url"
-            id != null && url.contains("/shorts/") -> {
+            id != null && url.contains("/shorts/") && de.abilas.gxtube.data.Library.settings.shortsEnabled -> {
                 ShortsLaunch.start.value = VideoItem(id = id, title = "", isShort = true)
                 IntentRouter.pending.value = "shorts"
             }
@@ -165,6 +172,13 @@ class MainActivity : ComponentActivity() {
             builder.setSeamlessResizeEnabled(true)
         }
         return builder.build()
+    }
+
+    /** Bildschirm anlassen, solange ein Video läuft (bei Pause darf das Handy wieder sperren). */
+    private fun updateKeepScreenOn() {
+        val playing = PlayerController.player.isPlaying && PlayerController.mode.value != PlayerMode.NONE
+        if (playing) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     private fun updatePip() {

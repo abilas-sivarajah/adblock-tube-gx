@@ -355,8 +355,8 @@ object PlayerController {
     private fun nextRelated(): VideoItem? {
         val n = _now.value ?: return null
         val watched = Library.data.value.history.take(50).map { it.video.id }.toSet()
-        return n.related.firstOrNull { it.id !in watched && !it.isLive && !it.isShort }
-            ?: n.related.firstOrNull { !it.isLive }
+        return n.related.firstOrNull { it.id !in watched && !it.isLive && !it.looksLikeShort }
+            ?: n.related.firstOrNull { !it.isLive && (Library.settings.shortsEnabled || !it.looksLikeShort) }
     }
 
     private fun onEnded() {

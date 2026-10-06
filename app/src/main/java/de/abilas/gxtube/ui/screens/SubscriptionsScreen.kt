@@ -41,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.data.SubscriptionFeed
 import de.abilas.gxtube.data.channelKey
+import de.abilas.gxtube.data.filterShorts
 import de.abilas.gxtube.ui.LocalNav
 import de.abilas.gxtube.ui.components.AppTopBar
 import de.abilas.gxtube.ui.components.Avatar
@@ -87,6 +88,7 @@ fun SubscriptionsScreen() {
             }
         }
         .map { v -> if (v.channelAvatar == null) v.copy(channelAvatar = avatars[channelKey(v.channelUrl)]) else v }
+        .filterShorts(lib.settings.shortsEnabled)
 
     CollapsingHeaderLayout(headerHeight = 52.dp, header = { AppTopBar() }) { padding ->
         if (lib.subscriptions.isEmpty()) {

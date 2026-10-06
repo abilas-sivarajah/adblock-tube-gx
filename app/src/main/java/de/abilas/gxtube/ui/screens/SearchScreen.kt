@@ -237,7 +237,9 @@ fun SearchScreen(initial: String) {
                     }
                 }
             }
-            val entries = vm.results.items
+            val entries = vm.results.items.filter {
+                lib.settings.shortsEnabled || !(it is ListEntry.Video && it.video.looksLikeShort)
+            }
             when {
                 entries.isEmpty() && vm.results.loading -> item { LoadingBox(Modifier.padding(top = 48.dp)) }
                 entries.isEmpty() && vm.results.error != null ->

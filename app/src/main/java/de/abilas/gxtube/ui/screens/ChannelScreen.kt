@@ -110,7 +110,8 @@ fun ChannelScreen(url: String) {
     val lib by Library.data.collectAsStateWithLifecycle()
     val page = vm.page
     val gridState = rememberLazyGridState()
-    val tab = page?.tabs?.getOrNull(vm.selected)
+    val tabs = page?.tabs.orEmpty().filter { lib.settings.shortsEnabled || it.key != "shorts" }
+    val tab = tabs.getOrNull(vm.selected)
     val list = tab?.let { vm.listFor(it) }
     var descriptionOpen by androidx.compose.runtime.remember { mutableStateOf(false) }
 
@@ -214,7 +215,7 @@ fun ChannelScreen(url: String) {
                             .horizontalScroll(rememberScrollState())
                             .padding(horizontal = 8.dp),
                     ) {
-                        p.tabs.forEachIndexed { i, t ->
+                        tabs.forEachIndexed { i, t ->
                             Column(
                                 Modifier
                                     .clickable { vm.selected = i }
@@ -242,7 +243,9 @@ fun ChannelScreen(url: String) {
             }
 
             if (list != null) {
-                val entries = list.items
+                val entries = list.items.filter {
+                    lib.settings.shortsEnabled || !(it is ListEntry.Video && it.video.looksLikeShort)
+                }
                 val shortsTab = tab?.key == "shorts"
                 items(
                     entries,

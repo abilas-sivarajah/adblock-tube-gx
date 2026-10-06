@@ -48,6 +48,7 @@ import de.abilas.gxtube.data.ShortsFeed
 import de.abilas.gxtube.data.SubscriptionFeed
 import de.abilas.gxtube.data.VideoItem
 import de.abilas.gxtube.data.YouTubeRepo
+import de.abilas.gxtube.data.filterShorts
 import de.abilas.gxtube.ui.LocalNav
 import de.abilas.gxtube.ui.ShortsLaunch
 import de.abilas.gxtube.ui.components.AppTopBar
@@ -73,7 +74,7 @@ class HomeViewModel : ViewModel() {
         Sync.importSubscriptionsInBackground()
         viewModelScope.launch { runCatching { SubscriptionFeed.refresh() } }
         select(null)
-        viewModelScope.launch { runCatching { ShortsFeed.ensureLoaded() } }
+        if (Library.settings.shortsEnabled) viewModelScope.launch { runCatching { ShortsFeed.ensureLoaded() } }
     }
 
     fun select(kiosk: Kiosk?) {
@@ -101,7 +102,7 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
     val listState = rememberLazyListState()
     val shorts by ShortsFeed.items.collectAsStateWithLifecycle()
     val lib by Library.data.collectAsStateWithLifecycle()
-    val videos = vm.list.items.filter { it.id !in lib.hidden }
+    val videos = vm.list.items.filter { it.id !in lib.hidden }.filterShorts(lib.settings.shortsEnabled)
 
     LaunchedEffect(vm.category) { listState.scrollToItem(0) }
     LoadMoreEffect(listState, enabled = vm.list.hasMore) { vm.list.loadMore() }
@@ -154,7 +155,7 @@ fun HomeScreen(vm: HomeViewModel = viewModel()) {
                 }
                 itemsIndexed(videos, key = { _, v -> v.id }) { index, video ->
                     VideoCard(video, onClick = { nav.openVideo(video) })
-                    if (index == 1 && vm.category == null && lib.settings.shortsOnHome && shorts.isNotEmpty()) {
+                    if (index == 1 && vm.category == null && lib.settings.shortsEnabled && lib.settings.shortsOnHome && shorts.isNotEmpty()) {
                         ShortsShelf(shorts.take(12)) { short ->
                             ShortsLaunch.start.value = short
                             nav.openVideo(short)
