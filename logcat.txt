@@ -1,0 +1,107 @@
+10-06 12:18:32.876   525  2371 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=0
+10-06 12:18:32.907   838   870 V WindowManagerShell: Transition requested: android.os.BinderProxy@4b89380 TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=8 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity } baseActivity=ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity} topActivity=ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity} origActivity=null realActivity=ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity} numActivities=1 lastActiveTime=50970 supportsMultiWindow=true resizeMode=2 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@487fdb9} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 128 - 0, 0) topActivityInfo=ActivityInfo{34b95fe de.abilas.gxtube.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden}, remoteTransition = null, displayChange = null }
+10-06 12:18:33.098  3318  3318 I e.abilas.gxtube: Using CollectorTypeCC GC.
+10-06 12:18:33.101  3318  3318 W e.abilas.gxtube: Unexpected CPU variant for x86: x86_64.
+10-06 12:18:33.101  3318  3318 W e.abilas.gxtube: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, tremont, kabylake, default
+10-06 12:18:33.113  3318  3318 E e.abilas.gxtube: Not starting debugger since process cannot load the jdwp agent.
+10-06 12:18:33.341   525   556 I ActivityManager: Start proc 3318:de.abilas.gxtube/u0a192 for next-top-activity {de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-06 12:18:34.142  3318  3318 D nativeloader: Configuring clns-6 for other apk /data/app/~~lbhAG9KkRgASPC37Lkn83g==/de.abilas.gxtube-K8pSG1bTtn8jO7FCBJm4Yg==/base.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~lbhAG9KkRgASPC37Lkn83g==/de.abilas.gxtube-K8pSG1bTtn8jO7FCBJm4Yg==/lib/x86_64:/data/app/~~lbhAG9KkRgASPC37Lkn83g==/de.abilas.gxtube-K8pSG1bTtn8jO7FCBJm4Yg==/base.apk!/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/de.abilas.gxtube
+10-06 12:18:34.147   525   544 V WindowManager: Sent Transition #8 createdAt=10-06 12:18:32.868 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=8 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity } baseActivity=ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity} topActivity=ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity} origActivity=null realActivity=ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity} numActivities=1 lastActiveTime=50970 supportsMultiWindow=true resizeMode=2 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{5b9a8ca Task{7549f83 #8 type=standard A=10192:de.abilas.gxtube}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 128 - 0, 0) topActivityInfo=ActivityInfo{7b69a3b de.abilas.gxtube.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden}, remoteTransition = null, displayChange = null }
+10-06 12:18:34.148   525   544 V WindowManager:     info={id=8 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[{WCT{RemoteToken{5b9a8ca Task{7549f83 #8 type=standard A=10192:de.abilas.gxtube}}} m=OPEN f=NONE leash=Surface(name=Task=8)/@0xd3a0af0 sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0},{WCT{RemoteToken{5fd558 Task{a854a9e #1 type=home}}} m=TO_BACK f=SHOW_WALLPAPER leash=Surface(name=Task=1)/@0x5e5ee sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0}]}
+10-06 12:18:34.209  3318  3318 V GraphicsEnvironment: ANGLE GameManagerService for de.abilas.gxtube: false
+10-06 12:18:34.209  3318  3318 V GraphicsEnvironment: de.abilas.gxtube is not listed in per-application setting
+10-06 12:18:34.790  3318  3318 I ExoPlayerImpl: Init d2200f5 [AndroidXMedia3/1.8.0] [emu64xa, sdk_gphone64_x86_64, Google, 34]
+10-06 12:18:35.000   525  1727 D CoreBackPreview: Window{5f333ed u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@fdc21e9, mPriority=-1, mIsAnimationCallback=false}
+10-06 12:18:36.056   525   806 I SdkSandboxManager: No SDKs used. Skipping SDK data reconcilation for CallingInfo{mUid=10192, mPackageName='de.abilas.gxtube, mAppProcessToken='null'}
+10-06 12:18:36.609   843   843 I SafetyLabelChangedBroadcastReceiver: received broadcast packageName: de.abilas.gxtube, current user: UserHandle{0}, packageChangeEvent: NEW_INSTALL, intent user: UserHandle{0}
+10-06 12:18:37.084  1059  1059 D CarrierSvcBindHelper: onPackageAdded: de.abilas.gxtube
+10-06 12:18:37.500  1059  1358 D ImsResolver: maybeAddedImsService, packageName: de.abilas.gxtube
+10-06 12:18:37.644   525  2026 I WindowManager: finishDrawing of relaunch: Window{5f333ed u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity} 1217ms
+10-06 12:18:37.726   525  2174 W InputManager-JNI: Input channel object '5bca9c7 Splash Screen de.abilas.gxtube (client)' was disposed without first being removed with the input manager!
+10-06 12:18:37.823   525   544 I ActivityTaskManager: Displayed de.abilas.gxtube/.MainActivity for user 0: +4s812ms
+10-06 12:18:38.711  1059  1059 D CarrierSvcBindHelper: onPackageModified: de.abilas.gxtube
+10-06 12:18:38.718   525  2250 D CoreBackPreview: Window{5f333ed u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback null
+10-06 12:18:38.728   525  2250 W InputManager-JNI: Input channel object '5f333ed de.abilas.gxtube/de.abilas.gxtube.MainActivity (client)' was disposed without first being removed with the input manager!
+10-06 12:18:38.739  1059  1358 D ImsResolver: maybeAddedImsService, packageName: de.abilas.gxtube
+10-06 12:18:39.061   525   539 D CoreBackPreview: Window{6f43dda u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@facae32, mPriority=-1, mIsAnimationCallback=false}
+10-06 12:18:39.472  3318  3378 W e.abilas.gxtube: Long monitor contention with owner DefaultDispatcher-worker-7 (3435) at java.lang.Object coil3.network.internal.SingleParameterLazy.get(java.lang.Object)(SingleParameterLazy.kt:19) waiters=2 in java.lang.Object coil3.network.internal.SingleParameterLazy.get(java.lang.Object) for 263ms
+10-06 12:18:39.475  3318  3432 W e.abilas.gxtube: Long monitor contention with owner DefaultDispatcher-worker-7 (3435) at java.lang.Object coil3.network.internal.SingleParameterLazy.get(java.lang.Object)(SingleParameterLazy.kt:19) waiters=4 in java.lang.Object coil3.network.internal.SingleParameterLazy.get(java.lang.Object) for 225ms
+10-06 12:18:39.999   525   939 I ImeTracker: de.abilas.gxtube:927abee4: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-06 12:18:39.999   525   939 I ImeTracker: de.abilas.gxtube:927abee4: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-06 12:18:40.031  1583  1583 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, false)
+10-06 12:18:41.331  3318  3755 D ProfileInstaller: Installing profile for de.abilas.gxtube
+10-06 12:18:44.459  3318  3330 W e.abilas.gxtube: Cleared Reference was only reachable from finalizer (only reported once)
+10-06 12:18:44.471  3318  3330 I e.abilas.gxtube: Background concurrent copying GC freed 653196(21MB) AllocSpace objects, 49(5536KB) LOS objects, 49% free, 7439KB/14MB, paused 46us,15us total 349.177ms
+10-06 12:18:49.396  1683  1683 I AiAiEcho: AppFetcherImplV2 updateApps package:[de.abilas.gxtube], userId:[0], reason:[package is added.].
+10-06 12:18:49.481  1683  1683 I AiAiEcho: AppFetcherImpl onPackageChanged de.abilas.gxtube.
+10-06 12:18:49.484  1683  3023 I AiAiEcho: AppIndexer Package:[de.abilas.gxtube] UserProfile:[0] Enabled:[true].
+10-06 12:18:49.484  1683  3023 I AiAiEcho: AppFetcherImplV2 updateApps package:[de.abilas.gxtube], userId:[0], reason:[package is updated.].
+10-06 12:18:51.739  1492  3552 I BlockstoreStorage: Clearing Blockstore Data for package de.abilas.gxtube [CONTEXT service_id=258 ]
+10-06 12:18:51.781  1431  2892 I FontLog : Package de.abilas.gxtube has no metadata [CONTEXT service_id=132 ]
+10-06 12:19:10.134   477  5047 D MediaCodec: flushMediametrics
+10-06 12:19:10.134   477  5047 I MediaCodec: MediaCodec will operate in async mode
+10-06 12:19:10.135   477  5046 D MediaCodec: keep callback message for reclaim
+10-06 12:19:10.155   477  5046 D MediaCodec: flushMediametrics
+10-06 12:19:21.877   838   870 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-06 12:19:21.877   525  2251 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-06 12:19:21.941   525  1727 D CoreBackPreview: Window{6f43dda u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@55ae535, mPriority=0, mIsAnimationCallback=true}
+10-06 12:19:23.209  3318  3318 E PlayerController: Video konnte nicht geladen werden
+10-06 12:19:23.209  3318  3318 E PlayerController: org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException: YouTube probably temporarily blocked anonymous watch access with this IP , got error LOGIN_REQUIRED: "Sign in to confirm that you're not a bot"
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.checkPlayabilityStatus(YoutubeStreamExtractor.java:854)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.fetchVisionOsClient(YoutubeStreamExtractor.java:897)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.onFetchPage(YoutubeStreamExtractor.java:813)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at org.schabi.newpipe.extractor.Extractor.fetchPage(Extractor.java:65)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:95)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:89)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo.stream$lambda$0(YouTubeRepo.kt:113)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo.$r8$lambda$u-1la3a1ubSXlP4-BUJ6bun-I8Y(Unknown Source:0)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo$$ExternalSyntheticLambda8.invoke(D8$$SyntheticClass:0)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo$io$2.invokeSuspend(YouTubeRepo.kt:89)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:820)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+10-06 12:19:23.209  3318  3318 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+10-06 12:19:49.471   525   598 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-06 12:19:49.476   838   870 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-06 12:19:56.814   525   598 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-06 12:19:56.818   838   870 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-06 12:20:03.144   525  2249 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=https://www.youtube.com/... flg=0x10000000 pkg=de.abilas.gxtube cmp=de.abilas.gxtube/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-06 12:20:03.144   838   870 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-06 12:20:19.926   525  2404 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=https://www.youtube.com/... flg=0x10000000 pkg=de.abilas.gxtube cmp=de.abilas.gxtube/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-06 12:20:19.927   838   870 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-06 12:20:20.104  3318  3318 E PlayerController: Video konnte nicht geladen werden
+10-06 12:20:20.104  3318  3318 E PlayerController: org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException: YouTube probably temporarily blocked anonymous watch access with this IP , got error LOGIN_REQUIRED: "Sign in to confirm that you're not a bot"
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.checkPlayabilityStatus(YoutubeStreamExtractor.java:854)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.fetchVisionOsClient(YoutubeStreamExtractor.java:897)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.onFetchPage(YoutubeStreamExtractor.java:813)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at org.schabi.newpipe.extractor.Extractor.fetchPage(Extractor.java:65)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:95)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:89)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo.stream$lambda$0(YouTubeRepo.kt:113)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo.$r8$lambda$u-1la3a1ubSXlP4-BUJ6bun-I8Y(Unknown Source:0)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo$$ExternalSyntheticLambda8.invoke(D8$$SyntheticClass:0)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo$io$2.invokeSuspend(YouTubeRepo.kt:89)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:820)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+10-06 12:20:20.104  3318  3318 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+10-06 12:20:57.212   525  2424 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=https://www.youtube.com/... flg=0x10000000 pkg=de.abilas.gxtube cmp=de.abilas.gxtube/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-06 12:20:57.215   838   870 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-06 12:21:13.684   525  1987 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-06 12:21:13.687   838   870 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-06 12:21:19.080  1583  1583 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, true)
+10-06 12:21:19.154   525  2447 D nativeloader: Configuring clns-18 for other apk . target_sdk_version=36, uses_libraries=, library_path=/data/app/~~lbhAG9KkRgASPC37Lkn83g==/de.abilas.gxtube-K8pSG1bTtn8jO7FCBJm4Yg==/lib/x86_64:/data/app/~~lbhAG9KkRgASPC37Lkn83g==/de.abilas.gxtube-K8pSG1bTtn8jO7FCBJm4Yg==/base.apk!/lib/x86_64, permitted_path=/data:/mnt/expand
+10-06 12:21:19.169   525  2447 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-06 12:21:19.188   838   870 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-06 12:21:19.264  1583  1583 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, true)
+10-06 12:21:19.408  1583  1583 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, true)
+10-06 12:21:19.476   525  1727 D CoreBackPreview: Window{6f43dda u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@22d3901, mPriority=-1, mIsAnimationCallback=false}
+10-06 12:21:20.153  3318  3330 I e.abilas.gxtube: Background young concurrent copying GC freed 120358(5229KB) AllocSpace objects, 3(1316KB) LOS objects, 27% free, 16MB/23MB, paused 1.503ms,16us total 523.308ms
