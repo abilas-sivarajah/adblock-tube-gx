@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        Streamen auf den PC: GX Tube Desktop im eigenen WLAN spricht unverschlüsselt
+        (ws://<PC>:8765, http://<PC>:8765). Android kann das nicht auf private IP-Bereiche
+        beschränken – alle Internet-Adressen der App (YouTube, SponsorBlock, GitHub) sind fest https.
+    -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

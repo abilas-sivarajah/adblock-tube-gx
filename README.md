@@ -43,6 +43,7 @@ Voraussetzung: Android 8.0 oder neuer.
 | **Kanäle & Playlists** | Banner, Abonnieren, Tabs (Videos, Shorts, Live, Playlists), „Alle abspielen“, Zufallsmix |
 | **Du** | Verlauf mit rotem Fortschrittsbalken („Weiter ansehen“), Später ansehen, Videos mit „Mag ich“ |
 | **Google-Konto (freiwillig)** | Anmelden unter **Du → Mit Google anmelden**: deine echte YouTube-Startseite, Abos aus dem Konto, Verlauf / Später ansehen / „Mag ich“ von YouTube; Abonnieren, Liken und Speichern landen im Konto. Videos laufen trotzdem ohne Werbung. |
+| **Auf PC streamen** | Wie „Auf dem Fernseher abspielen“ bei YouTube: oben auf das Streamen-Symbol tippen, PC auswählen – Videos laufen dann werbefrei auf dem PC mit [GX Tube Desktop](https://github.com/abilas-sivarajah/adblock-tube-gx-desktop). Das Handy wird zur Fernbedienung (Pause, Springen, Weiter, Lautstärke über die Lautstärketasten, Warteschlange „Als Nächstes abspielen“), auch aus der Benachrichtigung und dem Sperrbildschirm. Siehe unten. |
 | **Links öffnen** | YouTube-Links aus anderen Apps über „Teilen → GX Tube“ öffnen (auch `youtu.be`, Shorts, Kanäle, Playlists, `?t=` Zeitstempel) |
 | **Design** | Wie die YouTube-App, hell/dunkel (folgt dem System oder fest einstellbar) |
 
@@ -56,6 +57,24 @@ und schickt Abonnieren / „Mag ich“ / „Später ansehen“ zusätzlich an de
 2. **Alle abwählen**, dann nur **YouTube und YouTube Music** auswählen.
 3. Bei „Alle YouTube-Daten enthalten“ nur **Abos** anhaken → Export erstellen → ZIP herunterladen.
 4. In GX Tube: **Du → Abos importieren** → ZIP-Datei (oder `subscriptions.csv`) auswählen.
+
+## 🖥️ Auf den PC streamen
+
+1. Auf dem PC **[GX Tube Desktop](https://github.com/abilas-sivarajah/adblock-tube-gx-desktop/releases/latest)** installieren und starten
+   (Windows, Linux, macOS). Unter Windows beim ersten Start den Zugriff für **private Netzwerke** erlauben.
+2. Handy und PC ins selbe WLAN.
+3. In GX Tube oben (oder im Player) auf das **Streamen-Symbol** tippen und den PC auswählen.
+   Wird er nicht gefunden: **„Per Adresse verbinden“** und die Adresse eingeben, die GX Tube Desktop anzeigt.
+4. Ab jetzt läuft jedes Video, das du antippst, auf dem PC. Läuft beim Verbinden schon ein Video auf dem Handy,
+   geht es auf dem PC an derselben Stelle weiter.
+
+Im Video-Menü (⋮) gibt es beim Streamen **„Als Nächstes abspielen“** und **„Zur Warteschlange hinzufügen“**.
+Über das Streamen-Symbol: Lautstärke am PC, **„Auf dem Handy weiterschauen“** (hält am PC an und macht hier weiter)
+oder **„Verbindung trennen“** (das Video läuft am PC weiter). Shorts laufen immer auf dem Handy.
+Wurde die App beim Streamen geschlossen, verbindet sie sich beim nächsten Öffnen von selbst wieder (innerhalb von 12 Stunden).
+
+Technisch: Suche per UDP-Broadcast (Port 8766), Steuerung per WebSocket (Port 8765), nur im lokalen Netz –
+Protokoll: [PROTOCOL.md](https://github.com/abilas-sivarajah/adblock-tube-gx-desktop/blob/main/PROTOCOL.md).
 
 ## ⚠️ Grenzen
 
@@ -111,8 +130,13 @@ app/src/main/java/de/abilas/gxtube/
 │   ├── Account.kt / Sync.kt         # freiwillige Google-Anmeldung, Abgleich mit dem Konto
 │   ├── SponsorBlock.kt              # gesponserte Abschnitte
 │   ├── Http.kt / Models.kt
+├── cast/                            # Auf den PC streamen (GX Tube Desktop)
+│   ├── Cast.kt                      # Verbindung (WebSocket), Zustand und Warteschlange vom PC, Bedienung
+│   ├── CastDiscovery.kt             # PCs im WLAN finden (UDP-Broadcast)
+│   ├── CastProtocol.kt              # Nachrichten-Format
+│   └── CastPlayer.kt                # Benachrichtigung/Sperrbildschirm + Lautstärketasten steuern den PC
 ├── player/
-│   ├── PlayerController.kt          # ein Player für alles: Laden, Qualität, Autoplay, Fortschritt
+│   ├── PlayerController.kt          # ein Player für alles: Laden, Qualität, Autoplay, Fortschritt, Streamen
 │   ├── StreamResolver.kt            # Streams → ExoPlayer-Quelle (DASH, Video+Audio zusammenführen)
 │   ├── YoutubeHttpDataSource.java   # aus NewPipe: passende Header/Parameter für YouTube-Streams
 │   └── PlaybackService.kt           # Hintergrundwiedergabe + Benachrichtigung
@@ -120,6 +144,7 @@ app/src/main/java/de/abilas/gxtube/
     ├── App.kt                       # Navigation, untere Leiste
     ├── screens/                     # Startseite, Shorts, Abos, Du, Suche, Kanal, Playlist, Einstellungen
     ├── watch/                       # Video-Seite, Mini-Player, Bedienelemente, Kommentare
+    ├── cast/                        # Streamen-Symbol, Geräteauswahl, Anzeige "Wird auf … abgespielt"
     └── components/                  # Video-Karten, Chips, Knöpfe …
 ```
 

@@ -28,7 +28,7 @@ fun openLink(context: Context, nav: AppNav?, url: String) {
     val seconds = TIME_PARAM.find(url)?.groupValues?.get(1)?.toLongOrNull()
     val current = PlayerController.now.value?.video?.id
     when {
-        id != null && id == current && seconds != null -> PlayerController.player.seekTo(seconds * 1000)
+        id != null && id == current && seconds != null -> PlayerController.seekTo(seconds * 1000)
         id != null -> PlayerController.play(VideoItem(id = id, title = ""), startMs = seconds?.times(1000))
         nav != null && (url.contains("youtube.com/@") || url.contains("youtube.com/channel/") ||
             url.contains("youtube.com/c/")) -> nav.openChannel(url)

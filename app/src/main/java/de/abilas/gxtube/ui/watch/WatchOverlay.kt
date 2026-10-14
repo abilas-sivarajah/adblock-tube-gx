@@ -47,9 +47,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.abilas.gxtube.cast.Cast
 import de.abilas.gxtube.player.PlayerController
 import de.abilas.gxtube.player.PlayerMode
 import de.abilas.gxtube.ui.BottomBarHeight
+import de.abilas.gxtube.ui.cast.CastSurface
 import de.abilas.gxtube.ui.theme.Yt
 import de.abilas.gxtube.ui.theme.YtColors
 import kotlinx.coroutines.launch
@@ -66,15 +68,21 @@ fun WatchOverlay(inPip: Boolean, fullscreen: Boolean) {
     val now by PlayerController.now.collectAsStateWithLifecycle()
     val mode by PlayerController.mode.collectAsStateWithLifecycle()
     val expanded by PlayerController.expanded.collectAsStateWithLifecycle()
+    val remote by PlayerController.remote.collectAsStateWithLifecycle()
     val n = now
     if (mode != PlayerMode.WATCH || n == null) return
+
+    // Videobild: lokal der Player, beim Streamen ein Standbild "Wird auf … abgespielt"
+    val surface: @Composable (Modifier, Boolean) -> Unit = { m, compact ->
+        if (remote) CastSurface(n, m, compact) else PlayerSurface(m)
+    }
 
     if (inPip) {
         Box(
             Modifier
                 .fillMaxSize()
                 .background(Color.Black),
-        ) { PlayerSurface(Modifier.fillMaxSize()) }
+        ) { surface(Modifier.fillMaxSize(), false) }
         return
     }
 
@@ -91,7 +99,7 @@ fun WatchOverlay(inPip: Boolean, fullscreen: Boolean) {
                 .fillMaxSize()
                 .background(Color.Black),
         ) {
-            PlayerSurface(Modifier.fillMaxSize())
+            surface(Modifier.fillMaxSize(), false)
             PlayerControls(
                 now = n,
                 fullscreen = true,
@@ -171,7 +179,7 @@ fun WatchOverlay(inPip: Boolean, fullscreen: Boolean) {
             if (p < 0.3f) {
                 MiniBar(
                     title = n.video.title,
-                    channel = n.video.channelName,
+                    channel = if (remote) "Wird auf ${Cast.device?.name ?: "dem PC"} abgespielt" else n.video.channelName,
                     modifier = Modifier
                         .padding(start = playerW)
                         .height(MiniHeight)
@@ -191,7 +199,7 @@ fun WatchOverlay(inPip: Boolean, fullscreen: Boolean) {
                     .background(Color.Black)
                     .then(dragModifier),
             ) {
-                PlayerSurface(Modifier.fillMaxSize())
+                surface(Modifier.fillMaxSize(), p < 0.5f)
                 if (p > 0.9f) {
                     PlayerControls(
                         now = n,

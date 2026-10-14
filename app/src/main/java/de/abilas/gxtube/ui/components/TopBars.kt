@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.abilas.gxtube.R
 import de.abilas.gxtube.ui.LocalNav
+import de.abilas.gxtube.ui.cast.CastButton
 import de.abilas.gxtube.ui.theme.Yt
 import kotlin.math.roundToInt
 
@@ -69,6 +70,7 @@ fun AppTopBar(actions: @Composable RowScope.() -> Unit = {}) {
             color = Yt.colors.text,
         )
         Spacer(Modifier.weight(1f))
+        CastButton()
         actions()
         IconButton(onClick = { nav.openSearch() }) {
             Icon(Icons.Outlined.Search, contentDescription = "Suchen", tint = Yt.colors.text)

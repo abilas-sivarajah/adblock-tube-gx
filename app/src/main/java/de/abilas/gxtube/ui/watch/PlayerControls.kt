@@ -63,8 +63,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
+import de.abilas.gxtube.cast.Cast
 import de.abilas.gxtube.player.NowPlaying
 import de.abilas.gxtube.player.PlayerController
+import de.abilas.gxtube.ui.cast.CastButton
 import de.abilas.gxtube.ui.theme.Yt
 import de.abilas.gxtube.util.Fmt
 import kotlinx.coroutines.delay
@@ -79,14 +81,23 @@ fun PlayerControls(
     modifier: Modifier = Modifier,
 ) {
     val ps = rememberPlayerState()
+    val remote by PlayerController.remote.collectAsStateWithLifecycle()
+    val remoteState by Cast.state.collectAsStateWithLifecycle()
     var visible by remember { mutableStateOf(true) }
     var interaction by remember { mutableIntStateOf(0) }
     var scrub by remember { mutableStateOf<Long?>(null) }
     var seekFeedback by remember { mutableStateOf<Pair<Int, Int>?>(null) } // Richtung, Zähler
     var showSettings by remember { mutableStateOf(false) }
     val ended = ps.state == Player.STATE_ENDED
+    // Beim Streamen: Fehler und Laden kommen vom PC, die Bedienung bleibt immer sichtbar (wie bei YouTube)
+    val error = if (remote) remoteState?.error else now.error
+    val loading = if (remote) remoteState?.status == "loading" else now.loading
 
-    LaunchedEffect(visible, ps.isPlaying, interaction, scrub) {
+    LaunchedEffect(visible, ps.isPlaying, interaction, scrub, remote) {
+        if (remote) {
+            visible = true
+            return@LaunchedEffect
+        }
         if (visible && ps.isPlaying && scrub == null) {
             delay(3000)
             visible = false
@@ -105,7 +116,7 @@ fun PlayerControls(
             .pointerInput(now.video.id) {
                 detectTapGestures(
                     onTap = {
-                        visible = !visible
+                        visible = remote || !visible
                         interaction++
                     },
                     onDoubleTap = { off ->
@@ -138,7 +149,7 @@ fun PlayerControls(
             }
         }
 
-        AnimatedVisibility(visible = visible || ended || now.error != null, enter = fadeIn(), exit = fadeOut()) {
+        AnimatedVisibility(visible = visible || ended || error != null, enter = fadeIn(), exit = fadeOut()) {
             Box(
                 Modifier
                     .fillMaxSize()
@@ -169,6 +180,7 @@ fun PlayerControls(
                     } else {
                         Spacer(Modifier.weight(1f))
                     }
+                    CastButton(tint = Color.White)
                     IconButton(onClick = {
                         showSettings = true
                         interaction++
@@ -178,7 +190,7 @@ fun PlayerControls(
                 }
 
                 // Mitte
-                if (!now.loading && ps.state != Player.STATE_BUFFERING && now.error == null) {
+                if (!loading && ps.state != Player.STATE_BUFFERING && error == null) {
                     Row(
                         Modifier.align(Alignment.Center),
                         verticalAlignment = Alignment.CenterVertically,
@@ -236,18 +248,20 @@ fun PlayerControls(
                         )
                     }
                     Spacer(Modifier.weight(1f))
-                    IconButton(onClick = { onFullscreen(!fullscreen) }) {
-                        Icon(
-                            if (fullscreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
-                            "Vollbild",
-                            tint = Color.White,
-                        )
+                    if (!remote || fullscreen) {
+                        IconButton(onClick = { onFullscreen(!fullscreen) }) {
+                            Icon(
+                                if (fullscreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
+                                "Vollbild",
+                                tint = Color.White,
+                            )
+                        }
                     }
                 }
             }
         }
 
-        if (now.loading || (ps.state == Player.STATE_BUFFERING && ps.playWhenReady)) {
+        if (loading || (ps.state == Player.STATE_BUFFERING && ps.playWhenReady)) {
             CircularProgressIndicator(
                 color = Color.White,
                 strokeWidth = 3.dp,
@@ -257,7 +271,7 @@ fun PlayerControls(
             )
         }
 
-        now.error?.let { message ->
+        error?.let { message ->
             Column(
                 Modifier
                     .align(Alignment.Center)
@@ -292,7 +306,7 @@ fun PlayerControls(
                     interaction++
                 },
                 onSeek = {
-                    PlayerController.player.seekTo(it)
+                    PlayerController.seekTo(it)
                     interaction++
                 },
                 modifier = Modifier
@@ -329,7 +343,10 @@ private fun CircleButton(icon: ImageVector, label: String, size: androidx.compos
 fun PlayerSettingsSheet(now: NowPlaying, onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var page by remember { mutableStateOf("main") }
-    val speed by PlayerController.speed.collectAsStateWithLifecycle()
+    val localSpeed by PlayerController.speed.collectAsStateWithLifecycle()
+    val remote by PlayerController.remote.collectAsStateWithLifecycle()
+    val remoteState by Cast.state.collectAsStateWithLifecycle()
+    val speed = if (remote) remoteState?.speed ?: 1f else localSpeed
     var loop by remember { mutableStateOf(PlayerController.player.repeatMode == Player.REPEAT_MODE_ONE) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Yt.colors.card) {
         when (page) {
@@ -356,7 +373,19 @@ fun PlayerSettingsSheet(now: NowPlaying, onDismiss: () -> Unit) {
                     }
                 }
             }
-            else -> Column(Modifier.padding(bottom = 24.dp)) {
+            else -> if (remote) Column(Modifier.padding(bottom = 24.dp)) {
+                // Beim Streamen wählt der PC die Qualität selbst
+                SheetRow(Icons.Outlined.Speed, "Wiedergabegeschwindigkeit", detail = if (speed == 1f) "Normal" else "${speed}×".replace('.', ',')) {
+                    page = "speed"
+                }
+                val autoplay = remoteState?.autoplay ?: true
+                SheetRow(Icons.Outlined.Loop, "Autoplay am PC", detail = if (autoplay) "An" else "Aus") {
+                    Cast.setAutoplay(!autoplay)
+                }
+                if (now.segments.isNotEmpty()) {
+                    SheetRow(Icons.Outlined.Slideshow, "SponsorBlock", detail = "${now.segments.size} Abschnitte werden am PC übersprungen") {}
+                }
+            } else Column(Modifier.padding(bottom = 24.dp)) {
                 SheetRow(
                     Icons.Outlined.HighQuality,
                     "Qualität",

@@ -49,6 +49,10 @@ shot 11_einstellungen 4
 adb shell cmd uimode night yes
 route home
 shot 12_dunkel 10
+# Auf PC streamen: Geräteauswahl (im Emulator ist kein PC da → Hinweise + "Per Adresse verbinden")
+route cast
+shot 13_streamen 8
+adb shell input keyevent KEYCODE_BACK
 
 adb logcat -d > "$OUT/logcat_full.txt" || true
 grep -E "gxtube|AndroidRuntime|PlayerController|StreamResolver|ExoPlayer|MediaCodec|FATAL" "$OUT/logcat_full.txt" | tail -800 > "$OUT/logcat.txt" || true

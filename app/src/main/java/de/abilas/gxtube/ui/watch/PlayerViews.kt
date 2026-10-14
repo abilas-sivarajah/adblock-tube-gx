@@ -30,6 +30,8 @@ import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.abilas.gxtube.cast.Cast
 import de.abilas.gxtube.data.SponsorSegment
 import de.abilas.gxtube.player.PlayerController
 import de.abilas.gxtube.ui.theme.YtColors
@@ -69,9 +71,42 @@ class PlayerUiState {
     var playWhenReady by mutableStateOf(false)
 }
 
-/** Wiedergabezustand für die Oberfläche (Position wird 5× pro Sekunde aktualisiert). */
+/**
+ * Wiedergabezustand für die Oberfläche (Position wird 5× pro Sekunde aktualisiert).
+ * Beim Streamen kommt er vom PC.
+ */
 @Composable
 fun rememberPlayerState(): PlayerUiState {
+    val remote by PlayerController.remote.collectAsStateWithLifecycle()
+    return if (remote) rememberRemoteState() else rememberLocalState()
+}
+
+@Composable
+private fun rememberRemoteState(): PlayerUiState {
+    val ui = remember { PlayerUiState() }
+    val state by Cast.state.collectAsStateWithLifecycle()
+    LaunchedEffect(state) {
+        while (true) {
+            val s = state
+            ui.isPlaying = s?.isPlaying == true
+            ui.playWhenReady = s?.playWhenReady == true
+            ui.state = when (s?.status) {
+                "loading", "buffering" -> Player.STATE_BUFFERING
+                "ended" -> Player.STATE_ENDED
+                "playing", "paused" -> Player.STATE_READY
+                else -> Player.STATE_IDLE
+            }
+            ui.position = Cast.positionNow()
+            ui.duration = s?.durationMs?.takeIf { it > 0 && !s.isLive } ?: 0L
+            ui.buffered = s?.bufferedMs ?: 0L
+            delay(200)
+        }
+    }
+    return ui
+}
+
+@Composable
+private fun rememberLocalState(): PlayerUiState {
     val player = PlayerController.player
     val ui = remember { PlayerUiState() }
     DisposableEffect(player) {

@@ -91,6 +91,7 @@ import kotlinx.coroutines.launch
 fun WatchDetails(n: NowPlaying) {
     val nav = LocalNav.current
     val lib by Library.data.collectAsStateWithLifecycle()
+    val remote by PlayerController.remote.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val listState = rememberLazyListState()
     var showDescription by remember(n.video.id) { mutableStateOf(false) }
@@ -264,14 +265,14 @@ fun WatchDetails(n: NowPlaying) {
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            if (next != null) "Nächstes: ${next.title}" else "Ende der Playlist",
+                            if (next != null) "Nächstes: ${next.title.ifBlank { "Video" }}" else if (remote) "Ende der Warteschlange" else "Ende der Playlist",
                             color = Yt.colors.text,
                             fontSize = 14.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            "Playlist · ${n.queueIndex + 1}/${n.queue.size}",
+                            "${if (remote) "Warteschlange am PC" else "Playlist"} · ${n.queueIndex + 1}/${n.queue.size}",
                             color = Yt.colors.textSecondary,
                             fontSize = 12.sp,
                         )
