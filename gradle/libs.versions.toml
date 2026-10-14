@@ -49,7 +49,8 @@ kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutine
 kotlinx-coroutines-guava = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-guava", version.ref = "coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 nanojson = { module = "com.github.TeamNewPipe:nanojson", version.ref = "nanojson" }
-newpipe-extractor = { module = "com.github.TeamNewPipe:NewPipeExtractor", version.ref = "newpipeExtractor" }
+# JitPack liefert den Extractor nur noch unter der klein geschriebenen Gruppe aus
+newpipe-extractor = { module = "com.github.teamnewpipe:NewPipeExtractor", version.ref = "newpipeExtractor" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]
