@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -81,14 +82,17 @@ object PlayerController {
 
     /** Video-Seite aufgeklappt (true) oder Mini-Player (false) */
     val expanded = MutableStateFlow(true)
-    val fullscreen = MutableStateFlow(false)
+
+    private val _fullscreen = MutableStateFlow(false)
+    /** Vollbild per Knopf (Querformat durch Drehen des Handys kommt in der Oberfläche noch dazu) */
+    val fullscreen: StateFlow<Boolean> = _fullscreen.asStateFlow()
 
     private val _fullscreenRequests = MutableSharedFlow<Boolean>(extraBufferCapacity = 4)
     /** Vollbild-Knopf gedrückt (true) oder Vollbild verlassen (false) – MainActivity dreht den Bildschirm. */
     val fullscreenRequests: SharedFlow<Boolean> = _fullscreenRequests.asSharedFlow()
 
     fun requestFullscreen(on: Boolean) {
-        fullscreen.value = on
+        _fullscreen.value = on
         _fullscreenRequests.tryEmit(on)
     }
 
@@ -106,6 +110,13 @@ object PlayerController {
 
     fun init(application: Application) {
         app = application
+        // Vollbild endet, sobald die Video-Seite zu ist (Mini-Player, Shorts, geschlossen) –
+        // sonst bliebe der Bildschirm im Querformat gesperrt
+        scope.launch {
+            combine(_mode, expanded) { mode, open -> mode == PlayerMode.WATCH && open }.collect { open ->
+                if (!open && _fullscreen.value) requestFullscreen(false)
+            }
+        }
     }
 
     private fun createPlayer(): ExoPlayer {
@@ -147,7 +158,6 @@ object PlayerController {
             return
         }
         _mode.value = PlayerMode.SHORTS
-        fullscreen.value = false
         qualityOverride = null
         load(video, 0, shorts = true, queue = emptyList())
     }
@@ -164,7 +174,6 @@ object PlayerController {
         player.clearMediaItems()
         _now.value = null
         _mode.value = PlayerMode.NONE
-        if (fullscreen.value) requestFullscreen(false)
         expanded.value = true
     }
 
@@ -202,9 +211,7 @@ object PlayerController {
                 player.prepare()
                 player.playWhenReady = true
 
-                val aspect = if (resolved.width > 0 && resolved.height > 0) {
-                    resolved.width.toFloat() / resolved.height
-                } else 16f / 9f
+                val aspect = resolved.aspect.takeIf { it > 0f } ?: (16f / 9f)
                 _now.value = NowPlaying(
                     video = enriched,
                     info = info,

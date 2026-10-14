@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
@@ -97,6 +99,8 @@ fun WatchOverlay(inPip: Boolean, fullscreen: Boolean) {
                 fullscreen = true,
                 onMinimize = { PlayerController.requestFullscreen(false) },
                 onFullscreen = { PlayerController.requestFullscreen(it) },
+                // Knöpfe nicht unter die Kamera-Aussparung legen
+                modifier = Modifier.windowInsetsPadding(WindowInsets.displayCutout),
             )
         }
         return

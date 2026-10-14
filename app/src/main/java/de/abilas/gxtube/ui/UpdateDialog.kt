@@ -13,7 +13,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,14 +25,12 @@ import androidx.lifecycle.repeatOnLifecycle
 import de.abilas.gxtube.ui.theme.Yt
 import de.abilas.gxtube.ui.theme.YtColors
 import de.abilas.gxtube.update.Updater
-import kotlinx.coroutines.launch
 
 /** "Update verfügbar" – Herunterladen und Installieren direkt in der App. */
 @Composable
 fun UpdateDialog() {
     val state by Updater.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     // Nach der Rückkehr aus den Android-Einstellungen neu prüfen, ob Installieren erlaubt ist
     var resumes by remember { mutableIntStateOf(0) }
@@ -66,7 +63,7 @@ fun UpdateDialog() {
                 },
                 confirmButton = {
                     if (allowed) {
-                        TextButton(onClick = { scope.launch { Updater.downloadAndInstall(context, s.release) } }) {
+                        TextButton(onClick = { Updater.startInstall(context, s.release) }) {
                             Text("Jetzt aktualisieren", color = YtColors.Red)
                         }
                     } else {
@@ -106,7 +103,7 @@ fun UpdateDialog() {
             text = { Text(s.message) },
             confirmButton = {
                 if (s.release != null) {
-                    TextButton(onClick = { scope.launch { Updater.downloadAndInstall(context, s.release) } }) {
+                    TextButton(onClick = { Updater.startInstall(context, s.release) }) {
                         Text("Erneut versuchen")
                     }
                 } else {

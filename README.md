@@ -36,9 +36,9 @@ Voraussetzung: Android 8.0 oder neuer.
 | **Hintergrundwiedergabe** | Ton läuft weiter bei gesperrtem Bildschirm oder in anderen Apps, mit Steuerung in Benachrichtigung und Sperrbildschirm (bei YouTube nur mit Premium) |
 | **Bild-im-Bild** | Video läuft im kleinen Fenster weiter, wenn du zum Startbildschirm wechselst |
 | **Startseite** | Mischung aus Videos ähnlich zu dem, was du geschaut hast, neuen Videos deiner Abos und Trends. Kategorien: Musik, Gaming, Live, Filme & Trailer, Podcasts. Shorts-Leiste. |
-| **Shorts** | Vollbild zum Hochwischen, Endlosschleife, Mag ich, Kommentare, Teilen, Abonnieren – oder in den Einstellungen **komplett ausschalten** (Tab, Startseite, Abos, Suche, Kanäle, ähnliche Videos) |
+| **Shorts** | Vollbild zum Hochwischen (immer hochkant), Endlosschleife, Mag ich, Kommentare, Teilen, Abonnieren – oder in den Einstellungen **komplett ausschalten** (Tab, Startseite, Abos, Suche, Kanäle, ähnliche Videos) |
 | **Abos** | Kanäle abonnieren, Abo-Feed mit „Heute“, „Diese Woche“, „Nicht angesehen“. **Import aus Google Takeout** (ZIP/CSV) und NewPipe, Export als JSON |
-| **Video-Seite** | Mini-Player (nach unten wischen), Vollbild beim Drehen, Doppeltippen ±10 s, Qualität (bis 4K), Geschwindigkeit, Wiederholen, Beschreibung mit klickbaren Zeitstempeln, Kommentare mit Antworten, ähnliche Videos, Autoplay |
+| **Video-Seite** | Mini-Player (nach unten wischen), Vollbild beim Drehen (Handy wieder hochkant halten beendet es – auch nach dem Vollbild-Knopf), Doppeltippen ±10 s, Qualität (bis 4K), Geschwindigkeit, Wiederholen, Beschreibung mit klickbaren Zeitstempeln, Kommentare mit Antworten, ähnliche Videos, Autoplay |
 | **Suche** | Vorschläge, Suchverlauf, Filter (Videos, Kanäle, Playlists), „Meintest du …“ |
 | **Kanäle & Playlists** | Banner, Abonnieren, Tabs (Videos, Shorts, Live, Playlists), „Alle abspielen“, Zufallsmix |
 | **Du** | Verlauf mit rotem Fortschrittsbalken („Weiter ansehen“), Später ansehen, Videos mit „Mag ich“ |

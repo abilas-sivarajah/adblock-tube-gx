@@ -14,6 +14,8 @@ import de.abilas.gxtube.data.Library
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,6 +61,10 @@ object Updater {
 
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
+
+    /** Eigener Scope: Der Download läuft weiter, auch wenn der Dialog verschwindet (z. B. bei Bild-im-Bild). */
+    private val scope = MainScope()
+    private var installJob: Job? = null
 
     /** Installierte Version, z. B. "0.1.7" */
     val currentVersion: String get() = BuildConfig.VERSION_NAME.substringBefore('-')
@@ -155,7 +161,12 @@ object Updater {
         )
     }
 
-    suspend fun downloadAndInstall(context: Context, release: Release) {
+    fun startInstall(context: Context, release: Release) {
+        if (installJob?.isActive == true) return
+        installJob = scope.launch { downloadAndInstall(context, release) }
+    }
+
+    private suspend fun downloadAndInstall(context: Context, release: Release) {
         val app = context.applicationContext
         try {
             _state.value = State.Downloading(release, 0f)

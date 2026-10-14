@@ -9,6 +9,7 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Rational
 import android.view.OrientationEventListener
 import android.view.WindowManager
@@ -36,7 +37,11 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private val inPip = mutableStateOf(false)
-    private var portraitUnlock: OrientationEventListener? = null
+
+    /** Wie der Bildschirm gerade festgelegt ist (siehe [updateOrientation]) */
+    private enum class OrientationLock { NONE, FULLSCREEN_LANDSCAPE, FULLSCREEN_PORTRAIT, SHORTS, UNTIL_UPRIGHT }
+    private var orientationLock = OrientationLock.NONE
+    private var orientationWatcher: OrientationEventListener? = null
 
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
@@ -66,7 +71,11 @@ class MainActivity : ComponentActivity() {
             }
         }
         lifecycleScope.launch {
-            PlayerController.fullscreenRequests.collect { on -> applyOrientation(on) }
+            PlayerController.fullscreenRequests.collect { on -> updateOrientation(leavingFullscreen = !on) }
+        }
+        lifecycleScope.launch {
+            // Shorts / neues Video im Vollbild – und nach einem Neuaufbau der Activity den Zustand wiederherstellen
+            combine(PlayerController.mode, PlayerController.now) { _, _ -> }.collect { updateOrientation() }
         }
     }
 
@@ -77,12 +86,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        orientationWatcher?.enable()
         PlayerController.onAppForeground()
         Updater.checkOnOpen(this, lifecycleScope)
     }
 
     override fun onStop() {
         super.onStop()
+        // Im Hintergrund keine Lagesensoren; erzwungenes Hochformat freigeben
+        if (orientationLock == OrientationLock.UNTIL_UPRIGHT) releaseOrientation() else orientationWatcher?.disable()
         val pip = Build.VERSION.SDK_INT >= 26 && isInPictureInPictureMode
         PlayerController.onAppBackground(inPip = pip)
         PlayerController.saveProgress()
@@ -90,7 +102,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         PlayerController.player.removeListener(pipListener)
-        portraitUnlock?.disable()
+        stopOrientationWatcher()
         super.onDestroy()
     }
 
@@ -128,31 +140,88 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ------------------------------------------------------------ Vollbild
+    // ------------------------------------------------------------ Vollbild / Drehen
 
-    private fun applyOrientation(fullscreen: Boolean) {
-        portraitUnlock?.disable()
-        portraitUnlock = null
-        if (fullscreen) {
-            val aspect = PlayerController.now.value?.aspect ?: (16f / 9f)
-            requestedOrientation = if (aspect >= 1f) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-            else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        } else if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            // Wie bei YouTube: erst Hochformat erzwingen, freigeben sobald das Handy wieder hochkant ist
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            portraitUnlock = object : OrientationEventListener(this) {
-                override fun onOrientationChanged(orientation: Int) {
-                    if (orientation == ORIENTATION_UNKNOWN) return
-                    if (orientation < 25 || orientation > 335) {
-                        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                        disable()
+    /**
+     * Legt die Bildschirmausrichtung passend zum Zustand fest (wie in der YouTube-App):
+     * - Vollbild-Knopf: quer (Hochkant-Videos: hoch). Wird das Handy danach quer und wieder
+     *   hochkant gehalten, endet das Vollbild – sonst bliebe der Bildschirm quer hängen.
+     * - Vollbild verlassen, während der Bildschirm quer ist: Hochformat erzwingen, bis das Handy
+     *   wieder hochkant gehalten wird; danach dreht sich die App wieder frei.
+     * - Shorts: immer hochkant.
+     */
+    private fun updateOrientation(leavingFullscreen: Boolean = false) {
+        val mode = PlayerController.mode.value
+        val landscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val target = when {
+            PlayerController.fullscreen.value && mode == PlayerMode.WATCH -> {
+                // Während das nächste Video lädt, bleibt es beim bisherigen Format
+                val wide = PlayerController.now.value?.takeIf { !it.loading && it.error == null }
+                    ?.let { it.aspect >= 1f } ?: (orientationLock != OrientationLock.FULLSCREEN_PORTRAIT)
+                if (wide) OrientationLock.FULLSCREEN_LANDSCAPE else OrientationLock.FULLSCREEN_PORTRAIT
+            }
+            mode == PlayerMode.SHORTS -> OrientationLock.SHORTS
+            leavingFullscreen && landscape && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) ->
+                OrientationLock.UNTIL_UPRIGHT
+            orientationLock == OrientationLock.UNTIL_UPRIGHT -> OrientationLock.UNTIL_UPRIGHT
+            else -> OrientationLock.NONE
+        }
+        if (target == orientationLock) return
+        orientationLock = target
+        stopOrientationWatcher()
+        when (target) {
+            OrientationLock.FULLSCREEN_LANDSCAPE -> {
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                var turnedSideways = false
+                watchOrientation { angle ->
+                    if (isSideways(angle)) {
+                        turnedSideways = true
+                    } else if (turnedSideways && isUpright(angle) && autoRotateEnabled()) {
+                        turnedSideways = false
+                        PlayerController.requestFullscreen(false)
                     }
                 }
-            }.also { if (it.canDetectOrientation()) it.enable() else requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
-        } else {
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+            OrientationLock.FULLSCREEN_PORTRAIT, OrientationLock.SHORTS ->
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            OrientationLock.UNTIL_UPRIGHT -> {
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                watchOrientation { angle -> if (isUpright(angle)) releaseOrientation() }
+                if (orientationWatcher == null) releaseOrientation()
+            }
+            OrientationLock.NONE -> requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
+
+    private fun releaseOrientation() {
+        stopOrientationWatcher()
+        orientationLock = OrientationLock.NONE
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    }
+
+    /** Lage des Handys (0° = hochkant, 90°/270° = quer), unabhängig davon, wie der Bildschirm gerade steht. */
+    private fun watchOrientation(onAngle: (Int) -> Unit) {
+        val watcher = object : OrientationEventListener(this) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation != ORIENTATION_UNKNOWN) onAngle(orientation)
+            }
+        }
+        if (!watcher.canDetectOrientation()) return
+        orientationWatcher = watcher
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) watcher.enable()
+    }
+
+    private fun stopOrientationWatcher() {
+        orientationWatcher?.disable()
+        orientationWatcher = null
+    }
+
+    private fun isUpright(angle: Int) = angle < 30 || angle > 330
+    private fun isSideways(angle: Int) = angle in 60..120 || angle in 240..300
+
+    /** "Automatisch drehen" in den Android-Einstellungen an? Sonst bleibt das Vollbild quer, wie bei YouTube. */
+    private fun autoRotateEnabled(): Boolean =
+        Settings.System.getInt(contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1
 
     // ------------------------------------------------------------ Bild-im-Bild
 

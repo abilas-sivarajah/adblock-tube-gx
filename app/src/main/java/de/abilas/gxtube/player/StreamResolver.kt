@@ -46,8 +46,10 @@ object StreamResolver {
 
     data class Resolved(
         val source: MediaSource,
+        /** Qualitätsstufe wie in [VideoOption.height] */
         val height: Int,
-        val width: Int,
+        /** Seitenverhältnis Breite/Höhe, 0 = unbekannt */
+        val aspect: Float,
         val options: List<VideoOption>,
         val isLive: Boolean,
     )
@@ -109,10 +111,18 @@ object StreamResolver {
         }
     }
 
-    private fun heightOf(v: VideoStream): Int =
-        v.height.takeIf { it > 0 }
-            ?: Regex("(\\d+)p").find(v.resolution.orEmpty())?.groupValues?.get(1)?.toIntOrNull()
+    /**
+     * Qualitätsstufe wie bei YouTube ("1080p"). Bei Hochkant-Videos ist das die Breite – die
+     * Pixelhöhe (z. B. 1920) würde sonst mit der eingestellten Qualität verglichen und Shorts
+     * liefen in viel zu niedriger Auflösung.
+     */
+    internal fun qualityOf(v: VideoStream): Int =
+        Regex("(\\d+)p").find(v.resolution.orEmpty())?.groupValues?.get(1)?.toIntOrNull()
+            ?: listOf(v.width, v.height).filter { it > 0 }.minOrNull()
             ?: 0
+
+    private fun aspectOf(v: VideoStream): Float =
+        if (v.width > 0 && v.height > 0) v.width.toFloat() / v.height else 0f
 
     private fun fpsOf(v: VideoStream): Int =
         v.fps.takeIf { it > 0 }
@@ -129,7 +139,7 @@ object StreamResolver {
     fun options(info: StreamInfo): List<VideoOption> {
         val all = info.videoOnlyStreams.filter { usable(it) && codecRank(it) != null } +
             info.videoStreams.filter { usable(it) }
-        return all.groupBy { heightOf(it) }
+        return all.groupBy { qualityOf(it) }
             .filterKeys { it > 0 }
             .map { (h, list) ->
                 val hfr = list.any { fpsOf(it) > 30 }
@@ -152,12 +162,12 @@ object StreamResolver {
     private fun pickVideoOnly(info: StreamInfo, maxHeight: Int): VideoStream? {
         val candidates = info.videoOnlyStreams.filter { usable(it) && codecRank(it) != null }
         if (candidates.isEmpty()) return null
-        val fitting = candidates.filter { heightOf(it) <= maxHeight }.ifEmpty {
-            val lowest = candidates.minOf { heightOf(it) }
-            candidates.filter { heightOf(it) == lowest }
+        val fitting = candidates.filter { qualityOf(it) <= maxHeight }.ifEmpty {
+            val lowest = candidates.minOf { qualityOf(it) }
+            candidates.filter { qualityOf(it) == lowest }
         }
         return fitting.sortedWith(
-            compareByDescending<VideoStream> { heightOf(it) }
+            compareByDescending<VideoStream> { qualityOf(it) }
                 .thenByDescending { fpsOf(it).coerceAtMost(60) }
                 .thenBy { codecRank(it) ?: 9 },
         ).firstOrNull()
@@ -166,8 +176,8 @@ object StreamResolver {
     private fun pickMuxed(info: StreamInfo, maxHeight: Int): VideoStream? {
         val muxed = info.videoStreams.filter { usable(it) }
         if (muxed.isEmpty()) return null
-        return muxed.filter { heightOf(it) <= maxHeight }.maxByOrNull { heightOf(it) }
-            ?: muxed.minByOrNull { heightOf(it) }
+        return muxed.filter { qualityOf(it) <= maxHeight }.maxByOrNull { qualityOf(it) }
+            ?: muxed.minByOrNull { qualityOf(it) }
     }
 
     // ------------------------------------------------------------ Quellen bauen
@@ -185,7 +195,7 @@ object StreamResolver {
                     .createMediaSource(liveItem(item, dash))
                 else -> throw IllegalStateException("Kein Live-Stream gefunden")
             }
-            return Resolved(source, 0, 0, emptyList(), isLive = true)
+            return Resolved(source, 0, 0f, emptyList(), isLive = true)
         }
 
         val options = options(info)
@@ -195,7 +205,7 @@ object StreamResolver {
 
         // Getrennte Spuren nur nehmen, wenn sie besser sind als der kombinierte Stream (meist 360p)
         val useSplit = videoOnly != null && audio != null &&
-            (muxed == null || heightOf(videoOnly) > heightOf(muxed))
+            (muxed == null || qualityOf(videoOnly) > qualityOf(muxed))
 
         return when {
             useSplit -> {
@@ -203,13 +213,13 @@ object StreamResolver {
                 val a = audio!!
                 Resolved(
                     MergingMediaSource(true, sourceFor(context, v, info, item), sourceFor(context, a, info, item)),
-                    heightOf(v), v.width, options, isLive = false,
+                    qualityOf(v), aspectOf(v), options, isLive = false,
                 )
             }
             muxed != null -> Resolved(
-                sourceFor(context, muxed, info, item), heightOf(muxed), muxed.width, options, isLive = false,
+                sourceFor(context, muxed, info, item), qualityOf(muxed), aspectOf(muxed), options, isLive = false,
             )
-            audio != null -> Resolved(sourceFor(context, audio, info, item), 0, 0, options, isLive = false)
+            audio != null -> Resolved(sourceFor(context, audio, info, item), 0, 0f, options, isLive = false)
             else -> throw IllegalStateException("Keine abspielbaren Streams gefunden")
         }
     }
