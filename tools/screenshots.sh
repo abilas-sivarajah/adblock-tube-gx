@@ -40,6 +40,12 @@ link "https://www.youtube.com/watch?v=jNQXAC9IVRw"
 shot 07_video 25
 adb shell input tap 540 330
 shot 08_video_bedienung 2
+# Zahnrad-Menü im Player (zum Vergleich mit der Geräteauswahl unten)
+adb shell input tap 1006 196
+sleep 4
+adb exec-out screencap -p > "$OUT/08b_player_menue.png"
+adb shell input keyevent KEYCODE_BACK
+sleep 1
 adb shell input keyevent KEYCODE_BACK
 shot 09_miniplayer 5
 link "https://www.youtube.com/channel/UCLA_DiR1FfKNvjuUpBHmylQ"
@@ -54,6 +60,12 @@ route cast
 # ohne "Systemdialoge schließen" – das würde die Geräteauswahl gleich wieder zuklappen
 sleep 8
 adb exec-out screencap -p > "$OUT/13_streamen.png"
+adb shell input keyevent KEYCODE_BACK
+sleep 2
+# Streamen-Symbol oben direkt antippen
+adb shell input tap 880 196
+sleep 6
+adb exec-out screencap -p > "$OUT/14_streamen_getippt.png"
 adb shell input keyevent KEYCODE_BACK
 
 adb logcat -d > "$OUT/logcat_full.txt" || true
