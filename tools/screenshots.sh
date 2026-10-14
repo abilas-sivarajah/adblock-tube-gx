@@ -51,7 +51,9 @@ route home
 shot 12_dunkel 10
 # Auf PC streamen: Geräteauswahl (im Emulator ist kein PC da → Hinweise + "Per Adresse verbinden")
 route cast
-shot 13_streamen 8
+# ohne "Systemdialoge schließen" – das würde die Geräteauswahl gleich wieder zuklappen
+sleep 8
+adb exec-out screencap -p > "$OUT/13_streamen.png"
 adb shell input keyevent KEYCODE_BACK
 
 adb logcat -d > "$OUT/logcat_full.txt" || true
