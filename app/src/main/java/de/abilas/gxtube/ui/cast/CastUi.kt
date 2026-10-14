@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -76,6 +77,7 @@ import de.abilas.gxtube.player.NowPlaying
 import de.abilas.gxtube.player.PlayerController
 import de.abilas.gxtube.ui.theme.Yt
 import de.abilas.gxtube.ui.theme.YtColors
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 
 private const val DESKTOP_DOWNLOAD = "https://github.com/abilas-sivarajah/adblock-tube-gx-desktop/releases/latest"
@@ -108,6 +110,12 @@ fun CastButton(tint: Color = Yt.colors.text) {
 fun CastSheet(onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val connection by Cast.connection.collectAsStateWithLifecycle()
+    // Material3 1.3: Ändert sich die Höhe, während das Blatt aufklappt (Suche startet, PC gefunden),
+    // bricht das Aufklappen ab und das Blatt bleibt unsichtbar → dann einfach noch einmal aufklappen.
+    LaunchedEffect(sheetState) {
+        delay(600)
+        if (!sheetState.isVisible) sheetState.show()
+    }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Yt.colors.card) {
         Column(
             Modifier
@@ -201,12 +209,15 @@ private fun DevicePicker(connecting: CastDevice?, onConnected: () -> Unit) {
         if (connection is CastConnection.Connected && wasConnecting) onConnected()
     }
 
-    Row(Modifier.padding(start = 20.dp, end = 8.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+    // Feste Höhen, damit das Blatt beim Suchen nicht springt (siehe oben)
+    Row(Modifier.padding(start = 20.dp, end = 8.dp).height(52.dp), verticalAlignment = Alignment.CenterVertically) {
         Text("Auf Gerät streamen", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-        if (scanning) {
-            CircularProgressIndicator(color = c.textSecondary, strokeWidth = 2.dp, modifier = Modifier.padding(12.dp).size(20.dp))
-        } else {
-            IconButton(onClick = { Cast.scan() }) { Icon(Icons.Outlined.Refresh, "Erneut suchen", tint = c.text) }
+        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            if (scanning) {
+                CircularProgressIndicator(color = c.textSecondary, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+            } else {
+                IconButton(onClick = { Cast.scan() }) { Icon(Icons.Outlined.Refresh, "Erneut suchen", tint = c.text) }
+            }
         }
     }
 
@@ -215,26 +226,28 @@ private fun DevicePicker(connecting: CastDevice?, onConnected: () -> Unit) {
         addAll(devices)
         if (last != null && devices.none { it.id == last.id }) add(last)
     }
-    list.forEach { d ->
-        val busy = connecting?.id == d.id
-        DeviceRow(d, busy = busy, remembered = devices.none { it.id == d.id }) { Cast.connect(d) }
-    }
-    if (connecting != null && list.none { it.id == connecting.id }) DeviceRow(connecting, busy = true, remembered = false) {}
-
-    if (list.isEmpty() && !scanning) {
-        Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-            Text("Kein PC gefunden", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "Auf dem PC muss GX Tube Desktop laufen, und Handy und PC müssen im selben WLAN sein. " +
-                    "Unter Windows beim ersten Start den Zugriff für private Netzwerke erlauben.",
-                color = c.textSecondary,
-                fontSize = 13.sp,
-            )
+    Column(Modifier.fillMaxWidth().heightIn(min = 140.dp)) {
+        list.forEach { d ->
+            val busy = connecting?.id == d.id
+            DeviceRow(d, busy = busy, remembered = devices.none { it.id == d.id }) { Cast.connect(d) }
         }
-    }
-    if (list.isEmpty() && scanning) {
-        Text("Suche im WLAN …", color = c.textSecondary, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+        if (connecting != null && list.none { it.id == connecting.id }) DeviceRow(connecting, busy = true, remembered = false) {}
+
+        if (list.isEmpty() && !scanning) {
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                Text("Kein PC gefunden", color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Auf dem PC muss GX Tube Desktop laufen, und Handy und PC müssen im selben WLAN sein. " +
+                        "Unter Windows beim ersten Start den Zugriff für private Netzwerke erlauben.",
+                    color = c.textSecondary,
+                    fontSize = 13.sp,
+                )
+            }
+        }
+        if (list.isEmpty() && scanning) {
+            Text("Suche im WLAN …", color = c.textSecondary, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+        }
     }
 
     Spacer(Modifier.height(8.dp))
