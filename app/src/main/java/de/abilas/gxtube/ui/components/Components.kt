@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.PlaylistPlay
+import androidx.compose.material.icons.automirrored.outlined.QueueMusic
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MoreVert
@@ -65,6 +67,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import de.abilas.gxtube.cast.Cast
+import de.abilas.gxtube.cast.CastConnection
 import de.abilas.gxtube.data.ChannelRef
 import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.data.PlaylistRef
@@ -444,12 +448,18 @@ fun VideoMenuButton(video: VideoItem, extra: List<MenuAction> = emptyList(), mod
     val nav = LocalNav.current
     val lib by Library.data.collectAsStateWithLifecycle()
     val inLater = Library.isInWatchLater(lib, video.id)
+    val castConnection by Cast.connection.collectAsStateWithLifecycle()
     Box(modifier) {
         IconButton(onClick = { open = true }) {
             Icon(Icons.Filled.MoreVert, contentDescription = "Optionen", tint = Yt.colors.text, modifier = Modifier.size(20.dp))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             val actions = buildList {
+                // Beim Streamen: wie in der YouTube-App in die Warteschlange am PC
+                if (castConnection is CastConnection.Connected && !video.isLive) {
+                    add(MenuAction("Als Nächstes abspielen", Icons.AutoMirrored.Outlined.PlaylistPlay) { Cast.add(video, next = true) })
+                    add(MenuAction("Zur Warteschlange hinzufügen", Icons.AutoMirrored.Outlined.QueueMusic) { Cast.add(video, next = false) })
+                }
                 add(
                     MenuAction(
                         if (inLater) "Aus \"Später ansehen\" entfernen" else "Zu \"Später ansehen\" hinzufügen",

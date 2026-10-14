@@ -18,6 +18,10 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
+import de.abilas.gxtube.cast.Cast
+import de.abilas.gxtube.cast.CastConnection
+import de.abilas.gxtube.cast.RemoteQueue
+import de.abilas.gxtube.cast.RemoteState
 import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.data.SponsorBlock
 import de.abilas.gxtube.data.SponsorSegment
@@ -104,8 +108,19 @@ object PlayerController {
 
     val player: ExoPlayer by lazy { createPlayer() }
 
+    private val _remote = MutableStateFlow(false)
+    /** Das Video läuft gerade auf dem PC (GX Tube Desktop), nicht auf dem Handy. */
+    val remote: StateFlow<Boolean> = _remote.asStateFlow()
+    private var castDetailsJob: Job? = null
+    private var lastRemote: RemoteState? = null
+    private var lastCastProgressSave = 0L
+    private var pendingDisconnect: DisconnectAction? = null
+
+    private enum class DisconnectAction { LEAVE, CONTINUE_HERE }
+
     fun init(application: Application) {
         app = application
+        observeCast()
     }
 
     private fun createPlayer(): ExoPlayer {
@@ -135,6 +150,15 @@ object PlayerController {
     // ------------------------------------------------------------ Starten / Beenden
 
     fun play(video: VideoItem, queue: List<VideoItem> = emptyList(), startMs: Long? = null) {
+        if (Cast.connected) {
+            castPlay(video, queue, startMs)
+            return
+        }
+        if (_remote.value) {
+            // Verbindung zum PC gerade weg (wird neu aufgebaut): dann eben auf dem Handy
+            castDetailsJob?.cancel()
+            _remote.value = false
+        }
         _mode.value = PlayerMode.WATCH
         expanded.value = true
         qualityOverride = null
@@ -142,6 +166,11 @@ object PlayerController {
     }
 
     fun playShort(video: VideoItem) {
+        // Shorts laufen immer auf dem Handy; ein Video am PC läuft dort weiter
+        if (_remote.value) {
+            castDetailsJob?.cancel()
+            _remote.value = false
+        }
         if (_mode.value == PlayerMode.SHORTS && _now.value?.video?.id == video.id) {
             player.play()
             return
@@ -157,6 +186,11 @@ object PlayerController {
     }
 
     fun close() {
+        if (_remote.value) {
+            Cast.stop()
+            leaveRemote()
+            return
+        }
         saveProgress()
         loadJob?.cancel()
         tickerJob?.cancel()
@@ -170,10 +204,14 @@ object PlayerController {
 
     fun retry() {
         val n = _now.value ?: return
+        if (_remote.value) {
+            Cast.play(n.video, n.queue, Cast.positionNow().takeIf { it > 0 })
+            return
+        }
         load(n.video, player.currentPosition.takeIf { it > 0 }, _mode.value == PlayerMode.SHORTS, n.queue)
     }
 
-    private fun load(video: VideoItem, startMs: Long?, shorts: Boolean, queue: List<VideoItem>) {
+    private fun load(video: VideoItem, startMs: Long?, shorts: Boolean, queue: List<VideoItem>, autoPlay: Boolean = true) {
         saveProgress()
         loadJob?.cancel()
         skippedSegments.clear()
@@ -200,7 +238,7 @@ object PlayerController {
                 else player.setMediaSource(resolved.source, resume)
                 player.setPlaybackSpeed(if (shorts) 1f else _speed.value)
                 player.prepare()
-                player.playWhenReady = true
+                player.playWhenReady = autoPlay
 
                 val aspect = if (resolved.width > 0 && resolved.height > 0) {
                     resolved.width.toFloat() / resolved.height
@@ -282,7 +320,7 @@ object PlayerController {
         return if (shorts) minOf(h, 1080) else h
     }
 
-    private fun ensureService() {
+    fun ensureService() {
         if (controllerFuture != null) return
         runCatching {
             val token = SessionToken(app, ComponentName(app, PlaybackService::class.java))
@@ -293,6 +331,10 @@ object PlayerController {
     // ------------------------------------------------------------ Bedienung
 
     fun togglePlay() {
+        if (_remote.value) {
+            Cast.togglePlay()
+            return
+        }
         if (player.playbackState == Player.STATE_ENDED) {
             player.seekTo(0)
             player.play()
@@ -300,11 +342,23 @@ object PlayerController {
     }
 
     fun seekBy(deltaMs: Long) {
+        if (_remote.value) {
+            Cast.seekBy(deltaMs)
+            return
+        }
         val dur = player.duration.takeIf { it != C.TIME_UNSET } ?: Long.MAX_VALUE
         player.seekTo((player.currentPosition + deltaMs).coerceIn(0, dur))
     }
 
+    fun seekTo(positionMs: Long) {
+        if (_remote.value) Cast.seek(positionMs) else player.seekTo(positionMs)
+    }
+
     fun setSpeed(value: Float) {
+        if (_remote.value) {
+            Cast.setSpeed(value)
+            return
+        }
         _speed.value = value
         player.setPlaybackSpeed(value)
     }
@@ -329,12 +383,18 @@ object PlayerController {
     }
 
     val hasNext: Boolean
-        get() = _now.value?.let { n -> n.queueIndex >= 0 && n.queueIndex < n.queue.lastIndex } ?: false
+        get() = if (_remote.value) Cast.state.value?.hasNext == true
+        else _now.value?.let { n -> n.queueIndex >= 0 && n.queueIndex < n.queue.lastIndex } ?: false
 
     val hasPrevious: Boolean
-        get() = _now.value?.let { n -> n.queueIndex > 0 } ?: false
+        get() = if (_remote.value) Cast.state.value?.hasPrevious == true
+        else _now.value?.let { n -> n.queueIndex > 0 } ?: false
 
     fun next() {
+        if (_remote.value) {
+            Cast.next()
+            return
+        }
         val n = _now.value ?: return
         if (hasNext) {
             load(n.queue[n.queueIndex + 1], null, false, n.queue)
@@ -344,6 +404,10 @@ object PlayerController {
     }
 
     fun previous() {
+        if (_remote.value) {
+            Cast.previous()
+            return
+        }
         val n = _now.value ?: return
         if (player.currentPosition > 5_000 || !hasPrevious) {
             player.seekTo(0)
@@ -391,7 +455,7 @@ object PlayerController {
     // ------------------------------------------------------------ Hintergrund / Bild-im-Bild
 
     fun onAppBackground(inPip: Boolean) {
-        if (inPip || _now.value == null) return
+        if (inPip || _now.value == null || _remote.value) return
         when (_mode.value) {
             PlayerMode.WATCH -> if (Library.settings.backgroundPlay) setVideoTrackDisabled(true) else player.pause()
             PlayerMode.SHORTS -> player.pause()
@@ -435,10 +499,172 @@ object PlayerController {
     }
 
     fun saveProgress() {
+        if (_remote.value) return
         val n = _now.value ?: return
         if (n.loading || n.error != null || n.isLive) return
         val dur = player.duration
         if (dur == C.TIME_UNSET || dur <= 0) return
         Library.updateProgress(n.video.id, player.currentPosition, dur)
+    }
+
+    // ------------------------------------------------------------ Streamen auf den PC
+
+    private fun observeCast() {
+        scope.launch {
+            Cast.connection.collect { c ->
+                when (c) {
+                    is CastConnection.Connected -> onCastConnected()
+                    CastConnection.Disconnected -> onCastDisconnected()
+                    is CastConnection.Connecting -> Unit
+                }
+            }
+        }
+        scope.launch { Cast.state.collect { s -> if (Cast.connected && s != null) syncFromRemote(s) } }
+        scope.launch { Cast.queue.collect { q -> if (_remote.value) syncQueue(q) } }
+    }
+
+    /** Video auf dem PC abspielen; das Handy zeigt Details und die Fernbedienung. */
+    private fun castPlay(video: VideoItem, queue: List<VideoItem>, startMs: Long?) {
+        stopLocal()
+        _mode.value = PlayerMode.WATCH
+        expanded.value = true
+        _remote.value = true
+        val resume = startMs ?: resumePosition(video.id, video.durationSec * 1000).takeIf { it > 0 }
+        _now.value = NowPlaying(video = video, loading = true, queue = queue, queueIndex = queue.indexOfFirst { it.id == video.id })
+        Cast.play(video, queue, resume)
+        loadRemoteDetails(video, resume ?: 0)
+        ensureService()
+    }
+
+    private fun stopLocal() {
+        saveProgress()
+        loadJob?.cancel()
+        tickerJob?.cancel()
+        player.stop()
+        player.clearMediaItems()
+        if (fullscreen.value) requestFullscreen(false)
+    }
+
+    private fun onCastConnected() {
+        ensureService()
+        // Wie bei YouTube: läuft gerade ein Video auf dem Handy, geht es auf dem PC weiter
+        val n = _now.value
+        if (!_remote.value && _mode.value == PlayerMode.WATCH && n != null && n.error == null && !n.loading) {
+            val pos = player.currentPosition.takeIf { !n.isLive && it > 0 }
+            castPlay(n.video, n.queue, pos ?: 0)
+        }
+    }
+
+    /** Was am PC läuft, auf dem Handy anzeigen (auch wenn es ein anderes Handy oder Autoplay gestartet hat). */
+    private fun syncFromRemote(s: RemoteState) {
+        val rv = s.video
+        if (rv == null) {
+            lastRemote = null
+            if (_remote.value) leaveRemote()
+            return
+        }
+        lastRemote = s
+        val segments = s.segments.map { SponsorSegment(listOf(it.startMs / 1000.0, it.endMs / 1000.0), it.category, uuid = it.uuid) }
+        val n = _now.value
+        if (!_remote.value || n == null || n.video.id != rv.id || _mode.value != PlayerMode.WATCH) {
+            if (_mode.value == PlayerMode.SHORTS) return // Shorts laufen auf dem Handy weiter
+            val wasOpen = _mode.value == PlayerMode.WATCH
+            stopLocal()
+            _remote.value = true
+            _mode.value = PlayerMode.WATCH
+            if (!wasOpen) expanded.value = false // wie YouTube: als Mini-Player "Läuft auf …"
+            val q = Cast.queue.value
+            _now.value = NowPlaying(
+                video = rv.toVideoItem(),
+                loading = true,
+                isLive = rv.isLive,
+                segments = segments,
+                queue = q.items.map { it.toVideoItem() },
+                queueIndex = q.index,
+            )
+            loadRemoteDetails(rv.toVideoItem(), s.positionMs)
+            ensureService()
+        } else {
+            _now.update { cur ->
+                if (cur == null) cur
+                else cur.copy(
+                    segments = if (segments != cur.segments) segments else cur.segments,
+                    isLive = s.isLive || cur.isLive,
+                    video = if (cur.video.title.isBlank() && rv.title.isNotBlank()) cur.video.copy(title = rv.title, channelName = rv.channelName) else cur.video,
+                )
+            }
+        }
+        // Fortschritt merken ("Weiter ansehen" auf dem Handy)
+        val now = System.currentTimeMillis()
+        if (!s.isLive && s.durationMs > 0 && s.isPlaying && now - lastCastProgressSave > 10_000) {
+            lastCastProgressSave = now
+            Library.updateProgress(rv.id, s.positionMs, s.durationMs)
+        }
+    }
+
+    private fun syncQueue(q: RemoteQueue) {
+        _now.update { n -> n?.copy(queue = q.items.map { it.toVideoItem() }, queueIndex = q.index) }
+    }
+
+    /** Titel, Beschreibung, Kommentare, ähnliche Videos – abgespielt wird am PC. */
+    private fun loadRemoteDetails(video: VideoItem, positionMs: Long) {
+        castDetailsJob?.cancel()
+        castDetailsJob = scope.launch {
+            try {
+                val info = YouTubeRepo.stream(video.url)
+                val enriched = enrich(video, info)
+                val related = YouTubeRepo.relatedOf(info)
+                val live = info.streamType == StreamType.LIVE_STREAM || info.streamType == StreamType.AUDIO_LIVE_STREAM
+                _now.update { n ->
+                    if (n?.video?.id != video.id) n
+                    else n.copy(video = enriched, info = info, loading = false, related = related, isLive = live)
+                }
+                Library.recordWatch(enriched, positionMs, info.duration * 1000)
+                Library.addRecommendations(related.take(12))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                // Details sind nur Beiwerk – das Video läuft trotzdem am PC
+                Log.w(TAG, "Details für das gestreamte Video fehlen", t)
+                _now.update { n -> if (n?.video?.id == video.id) n.copy(loading = false) else n }
+            }
+        }
+    }
+
+    /** Nichts mehr vom PC anzeigen (PC spielt nichts mehr oder Verbindung getrennt). */
+    private fun leaveRemote() {
+        castDetailsJob?.cancel()
+        _remote.value = false
+        _now.value = null
+        _mode.value = PlayerMode.NONE
+        expanded.value = true
+    }
+
+    /**
+     * Verbindung zum PC beenden. [continueHere]: am PC anhalten und auf dem Handy an derselben
+     * Stelle weiterschauen; sonst läuft das Video am PC einfach weiter.
+     */
+    fun disconnectCast(continueHere: Boolean) {
+        pendingDisconnect = if (continueHere) DisconnectAction.CONTINUE_HERE else DisconnectAction.LEAVE
+        if (continueHere) Cast.pause()
+        Cast.disconnect(forget = true)
+    }
+
+    private fun onCastDisconnected() {
+        val action = pendingDisconnect
+        pendingDisconnect = null
+        val last = lastRemote
+        lastRemote = null
+        if (!_remote.value) return
+        val n = _now.value
+        castDetailsJob?.cancel()
+        _remote.value = false
+        if (n == null || last?.video == null || action == DisconnectAction.LEAVE) {
+            leaveRemote()
+            return
+        }
+        // Verbindung verloren → angehalten auf dem Handy; "Hier weiterschauen" → gleich weiter
+        val pos = if (last.isLive) null else last.positionMs
+        load(n.video, pos, shorts = false, queue = n.queue, autoPlay = action == DisconnectAction.CONTINUE_HERE)
     }
 }

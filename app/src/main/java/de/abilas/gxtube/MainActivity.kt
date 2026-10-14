@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Rational
+import android.view.KeyEvent
 import android.view.OrientationEventListener
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -22,6 +23,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.common.Player
+import de.abilas.gxtube.cast.Cast
 import de.abilas.gxtube.data.VideoItem
 import de.abilas.gxtube.data.videoIdOf
 import de.abilas.gxtube.player.PlayerController
@@ -68,6 +70,16 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             PlayerController.fullscreenRequests.collect { on -> applyOrientation(on) }
         }
+    }
+
+    /** Beim Streamen steuern die Lautstärketasten die Lautstärke am PC (wie in der YouTube-App). */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val volumeKey = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+        if (volumeKey && PlayerController.remote.value && Cast.connected) {
+            if (event.action == KeyEvent.ACTION_DOWN) Cast.volumeBy(if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP) 5 else -5)
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onNewIntent(intent: Intent) {

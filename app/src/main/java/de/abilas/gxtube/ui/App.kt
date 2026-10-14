@@ -56,10 +56,14 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import de.abilas.gxtube.R
+import de.abilas.gxtube.cast.Cast
 import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.data.Sync
 import de.abilas.gxtube.player.PlayerController
 import de.abilas.gxtube.player.PlayerMode
+import de.abilas.gxtube.ui.cast.CastLaunch
+import de.abilas.gxtube.ui.cast.CastSheet
+import de.abilas.gxtube.ui.cast.CastVolumeHint
 import de.abilas.gxtube.ui.components.LocalWatchProgress
 import de.abilas.gxtube.ui.screens.ChannelScreen
 import de.abilas.gxtube.ui.screens.HomeScreen
@@ -119,6 +123,9 @@ fun AppRoot(inPip: Boolean) {
             Sync.messages.collect { snackbar.showSnackbar(it) }
         }
         LaunchedEffect(Unit) {
+            Cast.messages.collect { snackbar.showSnackbar(it) }
+        }
+        LaunchedEffect(Unit) {
             IntentRouter.pending.collect { target ->
                 if (target == null) return@collect
                 IntentRouter.pending.value = null
@@ -130,6 +137,7 @@ fun AppRoot(inPip: Boolean) {
                         Routes.SHORTS -> if (Library.settings.shortsEnabled) nav.openTab(r)
                         in Routes.tabs -> nav.openTab(r)
                         "settings" -> nav.openSettings()
+                        "cast" -> CastLaunch.open.value = true
                         else -> nav.openLibrary(r)
                     }
                     target == "shorts" -> if (Library.settings.shortsEnabled) nav.openTab(Routes.SHORTS)
@@ -154,6 +162,9 @@ fun AppRoot(inPip: Boolean) {
                     }
                 }
                 WatchOverlay(inPip = inPip, fullscreen = fullscreen)
+                if (!inPip) CastVolumeHint(Modifier.align(Alignment.TopCenter))
+                val castSheet by CastLaunch.open.collectAsStateWithLifecycle()
+                if (castSheet && !inPip) CastSheet(onDismiss = { CastLaunch.open.value = false })
                 if (!inPip) UpdateDialog()
                 SnackbarHost(
                     hostState = snackbar,
