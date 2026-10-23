@@ -248,7 +248,17 @@ fun PlayerControls(
                         )
                     }
                     Spacer(Modifier.weight(1f))
-                    if (!remote || fullscreen) {
+                    val pcFullscreen = remoteState?.fullscreen
+                    if (remote && !fullscreen && pcFullscreen != null) {
+                        // Beim Streamen schaltet der Knopf das Vollbild am PC um
+                        IconButton(onClick = { Cast.setFullscreen(!pcFullscreen) }) {
+                            Icon(
+                                if (pcFullscreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
+                                if (pcFullscreen) "Vollbild am PC beenden" else "Vollbild am PC",
+                                tint = Color.White,
+                            )
+                        }
+                    } else if (!remote || fullscreen) {
                         IconButton(onClick = { onFullscreen(!fullscreen) }) {
                             Icon(
                                 if (fullscreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,

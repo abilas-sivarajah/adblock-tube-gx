@@ -30,6 +30,10 @@ import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.CastConnected
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.outlined.DesktopWindows
 import androidx.compose.material.icons.outlined.Computer
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.PhoneAndroid
@@ -73,6 +77,7 @@ import coil3.compose.AsyncImage
 import de.abilas.gxtube.cast.Cast
 import de.abilas.gxtube.cast.CastConnection
 import de.abilas.gxtube.cast.CastDevice
+import de.abilas.gxtube.cast.RemoteDisplay
 import de.abilas.gxtube.player.NowPlaying
 import de.abilas.gxtube.player.PlayerController
 import de.abilas.gxtube.ui.theme.Yt
@@ -179,6 +184,28 @@ private fun ConnectedPanel(device: CastDevice, onDismiss: () -> Unit) {
         modifier = Modifier.padding(horizontal = 20.dp),
     )
     Spacer(Modifier.height(16.dp))
+
+    // Fenster am PC: Vollbild und Bildschirm (ältere Desktop-Versionen melden das nicht)
+    state?.fullscreen?.let { pcFullscreen ->
+        SheetAction(
+            if (pcFullscreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
+            if (pcFullscreen) "Vollbild am PC beenden" else "Vollbild am PC",
+            if (pcFullscreen) null else "Das Video füllt den ganzen Bildschirm",
+        ) { Cast.setFullscreen(!pcFullscreen) }
+    }
+    val displays = state?.displays.orEmpty()
+    if (displays.size > 1) {
+        Text(
+            "Auf welchem Bildschirm?",
+            color = c.textSecondary,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 2.dp),
+        )
+        displays.forEachIndexed { i, d ->
+            DisplayRow(d, number = i + 1, selected = d.id == state?.displayId) { Cast.moveToDisplay(d.id) }
+        }
+        Spacer(Modifier.height(8.dp))
+    }
 
     if (state?.video != null) {
         SheetAction(Icons.Outlined.PhoneAndroid, "Auf dem Handy weiterschauen", "Am PC anhalten und hier an derselben Stelle fortsetzen") {
@@ -295,6 +322,29 @@ private fun DeviceRow(device: CastDevice, busy: Boolean, remembered: Boolean, on
             )
         }
         if (busy) CircularProgressIndicator(color = c.text, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+    }
+}
+
+@Composable
+private fun DisplayRow(display: RemoteDisplay, number: Int, selected: Boolean, onClick: () -> Unit) {
+    val c = Yt.colors
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Outlined.DesktopWindows, null, tint = if (selected) YtColors.Cyan else c.text)
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text("$number. ${display.name.ifBlank { "Bildschirm $number" }}", color = c.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val size = if (display.width > 0) "${display.width} × ${display.height}" else null
+            listOfNotNull(size, "Hauptbildschirm".takeIf { display.primary }).joinToString(" · ").takeIf { it.isNotEmpty() }?.let {
+                Text(it, color = c.textSecondary, fontSize = 12.sp)
+            }
+        }
+        if (selected) Icon(Icons.Filled.Check, "Läuft hier", tint = YtColors.Cyan)
     }
 }
 

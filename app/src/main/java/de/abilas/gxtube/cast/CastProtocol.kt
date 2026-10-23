@@ -60,6 +60,12 @@ object CastProtocol {
     fun remove(index: Int) = msg("remove") { put("index", index) }
     fun autoplay(enabled: Boolean) = msg("autoplay") { put("enabled", enabled) }
 
+    /** Vollbild am PC an/aus; null = umschalten. */
+    fun fullscreen(on: Boolean?) = msg("fullscreen") { if (on != null) put("on", on) }
+
+    /** Fenster am PC auf diesen Bildschirm verschieben (IDs aus [RemoteState.displays]). */
+    fun display(id: Long) = msg("display") { put("id", id) }
+
     private fun videoJson(v: VideoItem) = buildJsonObject {
         put("id", v.id)
         put("title", v.title)
@@ -182,12 +188,27 @@ data class RemoteState(
     val hasNext: Boolean = false,
     val hasPrevious: Boolean = false,
     val autoplay: Boolean = true,
+    /** Fenster am PC im Vollbild – null bei älteren Desktop-Versionen ohne diese Steuerung. */
+    val fullscreen: Boolean? = null,
+    /** Bildschirm, auf dem GX Tube am PC gerade läuft. */
+    val displayId: Long? = null,
+    val displays: List<RemoteDisplay> = emptyList(),
 ) {
     val isPlaying: Boolean get() = status == "playing"
     val isLoading: Boolean get() = status == "loading" || status == "buffering"
     /** Wiedergabe gewünscht (läuft oder lädt gerade). */
     val playWhenReady: Boolean get() = status == "playing" || status == "buffering" || status == "loading"
 }
+
+/** Ein Bildschirm am PC. */
+@Serializable
+data class RemoteDisplay(
+    val id: Long,
+    val name: String = "",
+    val primary: Boolean = false,
+    val width: Int = 0,
+    val height: Int = 0,
+)
 
 @Serializable
 data class RemoteQueue(

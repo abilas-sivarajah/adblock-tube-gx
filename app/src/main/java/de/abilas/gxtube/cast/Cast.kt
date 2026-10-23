@@ -462,6 +462,17 @@ object Cast {
     fun remove(index: Int) = send(CastProtocol.remove(index))
     fun setAutoplay(enabled: Boolean) = send(CastProtocol.autoplay(enabled))
 
+    /** Vollbild am PC an/aus (null = umschalten). */
+    fun setFullscreen(on: Boolean? = null) {
+        val next = on ?: !(_state.value?.fullscreen ?: false)
+        if (send(CastProtocol.fullscreen(next))) optimistic { it.copy(fullscreen = next) }
+    }
+
+    /** GX Tube am PC auf einen anderen Bildschirm schieben. */
+    fun moveToDisplay(id: Long) {
+        if (send(CastProtocol.display(id))) optimistic { it.copy(displayId = id) }
+    }
+
     fun setSpeed(value: Float) {
         if (send(CastProtocol.speed(value))) optimistic { it.copy(speed = value) }
     }

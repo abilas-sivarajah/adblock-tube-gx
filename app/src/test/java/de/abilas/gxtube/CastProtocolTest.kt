@@ -52,6 +52,10 @@ class CastProtocolTest {
         assertEquals(100, obj(CastProtocol.volume(250))["value"]!!.jsonPrimitive.int)
         assertEquals("true", obj(CastProtocol.add(rick, next = true))["next"]!!.jsonPrimitive.content)
         assertEquals("pause", obj(CastProtocol.simple("pause"))["type"]!!.jsonPrimitive.content)
+
+        assertNull(obj(CastProtocol.fullscreen(null))["on"])
+        assertEquals("true", obj(CastProtocol.fullscreen(true))["on"]!!.jsonPrimitive.content)
+        assertEquals(2528732444L, obj(CastProtocol.display(2528732444L))["id"]!!.jsonPrimitive.long)
     }
 
     @Test
@@ -69,6 +73,16 @@ class CastProtocolTest {
         assertEquals(1.5f, s.speed)
         assertEquals(1, s.segments.size)
         assertTrue(s.hasNext)
+        assertNull("ältere Desktop-Version: kein Vollbild-Knopf", s.fullscreen)
+
+        val withWindow = CastProtocol.parse(
+            """{"type":"state","status":"playing","fullscreen":true,"displayId":2528732444,
+               "displays":[{"id":2528732444,"name":"DELL U2415","primary":true,"width":1920,"height":1200},{"id":7,"name":"","primary":false}]}""",
+        ) as CastProtocol.Incoming.State
+        assertEquals(true, withWindow.state.fullscreen)
+        assertEquals(2528732444L, withWindow.state.displayId)
+        assertEquals(2, withWindow.state.displays.size)
+        assertEquals("DELL U2415", withWindow.state.displays[0].name)
 
         val idle = CastProtocol.parse("""{"type":"state","video":null,"status":"idle"}""") as CastProtocol.Incoming.State
         assertNull(idle.state.video)
@@ -163,6 +177,15 @@ class CastProtocolTest {
 
         ws.send(CastProtocol.volume(35))
         waitFor("volume 35") { m -> (m as? CastProtocol.Incoming.State)?.state?.takeIf { it.volume == 35 } }
+
+        // Vollbild und Bildschirme (GX Tube Desktop ab 0.1.15)
+        ws.send(CastProtocol.fullscreen(true))
+        val full = waitFor("Vollbild an") { m -> (m as? CastProtocol.Incoming.State)?.state?.takeIf { it.fullscreen == true } }
+        println("[Vollbild] an, Bildschirme: ${full.displays.map { it.name }}, aktuell ${full.displayId}")
+        assertTrue(full.displays.isNotEmpty())
+        assertEquals(full.displayId, full.displays.first { it.id == full.displayId }.id)
+        ws.send(CastProtocol.fullscreen(null))
+        waitFor("Vollbild aus (umgeschaltet)") { m -> (m as? CastProtocol.Incoming.State)?.state?.takeIf { it.fullscreen == false } }
 
         ws.send(CastProtocol.simple("stop"))
         waitFor("idle") { m -> (m as? CastProtocol.Incoming.State)?.state?.takeIf { it.video == null && it.status == "idle" } }
