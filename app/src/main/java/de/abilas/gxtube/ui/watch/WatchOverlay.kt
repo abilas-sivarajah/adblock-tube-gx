@@ -37,6 +37,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import de.abilas.gxtube.ui.twitch.TwitchAdOverlay
+import de.abilas.gxtube.ui.twitch.TwitchWatchDetails
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
@@ -74,7 +76,11 @@ fun WatchOverlay(inPip: Boolean, fullscreen: Boolean) {
 
     // Videobild: lokal der Player, beim Streamen ein Standbild "Wird auf … abgespielt"
     val surface: @Composable (Modifier, Boolean) -> Unit = { m, compact ->
-        if (remote) CastSurface(n, m, compact) else PlayerSurface(m)
+        if (remote) CastSurface(n, m, compact)
+        else if (n.video.isTwitch) Box(m) {
+            PlayerSurface(Modifier.fillMaxSize())
+            TwitchAdOverlay(compact)
+        } else PlayerSurface(m)
     }
 
     if (inPip) {
@@ -171,7 +177,7 @@ fun WatchOverlay(inPip: Boolean, fullscreen: Boolean) {
                         .fillMaxSize()
                         .alpha(p),
                 ) {
-                    WatchDetails(n)
+                    if (n.video.isTwitch) TwitchWatchDetails(n) else WatchDetails(n)
                 }
             }
 

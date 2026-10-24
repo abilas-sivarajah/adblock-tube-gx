@@ -23,6 +23,9 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import de.abilas.gxtube.twitch.TwitchAccount
+import de.abilas.gxtube.ui.LocalNav
+import de.abilas.gxtube.ui.twitch.twitchAdNote
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +55,7 @@ private val countries = linkedMapOf(
 )
 private val languages = linkedMapOf("de" to "Deutsch", "en" to "English", "ta" to "தமிழ் (Tamil)", "tr" to "Türkçe")
 private val themes = linkedMapOf("system" to "Wie das System", "dark" to "Dunkel", "light" to "Hell")
+private val twitchLanguages = linkedMapOf("de" to "Auf Deutsch", "en" to "Auf Englisch", "" to "Alle Sprachen")
 
 @Composable
 fun SettingsScreen() {
@@ -100,6 +104,32 @@ fun SettingsScreen() {
             }
             if (s.sponsorBlock) {
                 item { ChoiceRow("Was übersprungen wird", s.sponsorCategories.joinToString(", ") { SponsorBlock.label(it) }) { dialog = "sponsor" } }
+            }
+
+            item { Header("Twitch") }
+            item {
+                val account by TwitchAccount.state.collectAsStateWithLifecycle()
+                val nav = LocalNav.current
+                val a = account
+                when {
+                    a == null -> ChoiceRow("Bei Twitch anmelden", "Zum Chatten, für gefolgte Kanäle und Abo-Streams (wie Twitch auf dem Fernseher)") { nav.openTwitchLogin() }
+                    a.expired -> ChoiceRow("Twitch-Anmeldung abgelaufen", "Tippen, um dich neu anzumelden") { nav.openTwitchLogin() }
+                    else -> ChoiceRow("Angemeldet als ${a.user.name}", "Tippen zum Abmelden") { dialog = "twitch-logout" }
+                }
+            }
+            item {
+                SwitchRow("Chat bei Live-Streams", "Den Stream-Chat unter dem Video zeigen", s.twitchChat) {
+                    Library.updateSettings { st -> st.copy(twitchChat = it) }
+                }
+            }
+            item { ChoiceRow("Beliebte Streams", twitchLanguages[s.twitchLanguage] ?: s.twitchLanguage) { dialog = "twitch-language" } }
+            item {
+                Text(
+                    twitchAdNote(),
+                    fontSize = 13.sp,
+                    color = Yt.colors.textSecondary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
             }
 
             item { Header("Inhalte") }
@@ -192,6 +222,21 @@ fun SettingsScreen() {
             Library.updateSettings { it.copy(theme = v) }
         }
         "sponsor" -> SponsorDialog(s.sponsorCategories) { dialog = null }
+        "twitch-language" -> RadioDialog("Beliebte Twitch-Streams", twitchLanguages, s.twitchLanguage, { dialog = null }) { v ->
+            Library.updateSettings { it.copy(twitchLanguage = v) }
+        }
+        "twitch-logout" -> AlertDialog(
+            onDismissRequest = { dialog = null },
+            title = { Text("Bei Twitch abmelden?") },
+            text = { Text("Gefolgte Kanäle bleiben auf dem Handy. Chat schreiben geht dann nicht mehr.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    dialog = null
+                    scope.launch { TwitchAccount.logout() }
+                }) { Text("Abmelden") }
+            },
+            dismissButton = { TextButton(onClick = { dialog = null }) { Text("Abbrechen") } },
+        )
         "clear-history" -> AlertDialog(
             onDismissRequest = { dialog = null },
             title = { Text("Verlauf löschen?") },

@@ -1,4 +1,4 @@
-# 📱 GX Tube – YouTube ohne Werbung (Android)
+# 📱 GX Tube – YouTube und Twitch ohne Werbung (Android)
 
 Android-App, die aussieht und sich bedient wie die YouTube-App – nur **ohne Werbung**.
 Gleiche Idee wie der Desktop-Browser [AdBlock Browser GX](https://github.com/abilas-sivarajah/adblock-browser-gx)
@@ -8,6 +8,9 @@ Statt die YouTube-Seite zu laden und Werbung herauszufiltern, holt GX Tube die V
 über [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor) (dieselbe Technik wie NewPipe).
 Die Werbedaten von YouTube werden gar nicht erst geladen – es gibt also auch keine Wartezeit
 anstelle der Werbung, wie sie im Browser vorkommen kann.
+
+Oben neben dem Logo schaltest du auf **Twitch** um: Live-Streams, vergangene Streams (VODs), Kategorien
+und Chat – die Werbung entfernt der Twitch-Werbeblocker aus [AdBlock GX](https://github.com/abilas-sivarajah/adblock-gx-extension).
 
 ---
 
@@ -44,6 +47,7 @@ Voraussetzung: Android 8.0 oder neuer.
 | **Du** | Verlauf mit rotem Fortschrittsbalken („Weiter ansehen“), Später ansehen, Videos mit „Mag ich“ |
 | **Google-Konto (freiwillig)** | Anmelden unter **Du → Mit Google anmelden**: deine echte YouTube-Startseite, Abos aus dem Konto, Verlauf / Später ansehen / „Mag ich“ von YouTube; Abonnieren, Liken und Speichern landen im Konto. Videos laufen trotzdem ohne Werbung. |
 | **Auf PC streamen** | Wie „Auf dem Fernseher abspielen“ bei YouTube: oben auf das Streamen-Symbol tippen, PC auswählen – Videos laufen dann werbefrei auf dem PC mit [GX Tube Desktop](https://github.com/abilas-sivarajah/adblock-tube-gx-desktop). Das Handy wird zur Fernbedienung (Pause, Springen, Weiter, Lautstärke über die Lautstärketasten, Warteschlange „Als Nächstes abspielen“), auch aus der Benachrichtigung und dem Sperrbildschirm. Siehe unten. |
+| **Twitch** | Umschalter oben (YouTube \| Twitch): Startseite mit gefolgten Live-Kanälen, beliebten Streams (Deutsch/Englisch/alle) und Kategorien, Tab **„Folge ich“**, Suche nach Kanälen und Kategorien, Kanalseiten mit VODs, **Chat** unter Live-Streams (mit 7TV-, BTTV- und FFZ-Emotes), Qualität wählbar, **ohne Werbung** (siehe unten), auch **auf den PC streamen** |
 | **Links öffnen** | YouTube-Links aus anderen Apps über „Teilen → GX Tube“ öffnen (auch `youtu.be`, Shorts, Kanäle, Playlists, `?t=` Zeitstempel) |
 | **Design** | Wie die YouTube-App, hell/dunkel (folgt dem System oder fest einstellbar) |
 
@@ -76,6 +80,22 @@ Wurde die App beim Streamen geschlossen, verbindet sie sich beim nächsten Öffn
 Technisch: Suche per UDP-Broadcast (Port 8766), Steuerung per WebSocket (Port 8765), nur im lokalen Netz –
 Protokoll: [PROTOCOL.md](https://github.com/abilas-sivarajah/adblock-tube-gx-desktop/blob/main/PROTOCOL.md).
 
+## 🟣 Twitch
+
+- **Werbung:** Twitch schneidet die Werbung in den Stream. Der Werbeblocker aus AdBlock GX (hier in Kotlin für
+  ExoPlayer) holt während einer Werbepause dieselbe Sendung über eine zweite, werbefreie Twitch-Sitzung –
+  kurz in 360p, dann wieder in voller Qualität – und kehrt danach zum eigenen Stream zurück. Findet er keine,
+  läuft für die Dauer der Werbung ein schwarzes Bild („Werbepause – GX Tube blendet sie aus“).
+  Werbung wird nie als „gesehen“ gemeldet.
+- **Chat:** Mitlesen geht ohne Konto. Zum **Schreiben** unter Einstellungen → Twitch (oder direkt im Chat)
+  **bei Twitch anmelden** – wie bei Twitch auf dem Fernseher: „Hier in der App anmelden“ (der Code ist schon
+  eingetragen) oder auf einem anderen Gerät `twitch.tv/activate` öffnen und den Code eingeben.
+  GX Tube bekommt dein Passwort nie; das Token bleibt nur auf dem Handy (`files/twitch-account.json`).
+- **Folgen** speichert den Kanal auf dem Handy, angemeldet auch in deinem Twitch-Konto; deine gefolgten
+  Kanäle aus dem Konto kommen beim Anmelden dazu.
+- **Auf den PC streamen** geht wie bei YouTube (GX Tube Desktop ab 0.1.18) – der Chat bleibt auf dem Handy.
+- Twitch-Links lassen sich über „Teilen → GX Tube“ öffnen (`twitch.tv/<kanal>`, `twitch.tv/videos/<id>`).
+
 ## ⚠️ Grenzen
 
 - **Google-Anmeldung ist inoffiziell** (wie bei Grayjay oder Metrolist): Google erlaubt Apps von Dritten
@@ -99,6 +119,7 @@ cd adblock-tube-gx
 ./gradlew assembleRelease      # → app/build/outputs/apk/release/app-release.apk
 ./gradlew testDebugUnitTest    # Unit-Tests
 GXTUBE_ONLINE_TESTS=1 ./gradlew testDebugUnitTest --tests '*OnlineSmokeTest'   # prüft gegen echtes YouTube
+GXTUBE_ONLINE_TESTS=1 ./gradlew testDebugUnitTest --tests '*TwitchAdBlockTest'  # Werbeblocker mit echtem Twitch-Stream
 ```
 
 **Signierung:** Ohne weitere Angaben wird mit `signing/gxtube.jks` signiert (liegt bewusst im Repo,
@@ -117,6 +138,7 @@ bedeutet einmal deinstallieren (vorher Abos exportieren).
 | Hintergrund | Media3 `MediaSessionService` (Benachrichtigung, Sperrbildschirm, Kopfhörer-Tasten); im Hintergrund wird nur der Ton geladen |
 | Bilder | Coil 3 |
 | Werbung im Video | SponsorBlock-API (Abfrage über Hash-Präfix, die Video-ID bleibt privat) |
+| Twitch | GraphQL-Abfragen wie twitch.tv (ohne Konto mit der Kennung der Fernseher-App), HLS über `usher.ttvnw.net`. Werbeblocker `twitch/TwitchAdBlock.kt`: Kotlin-Fassung von `twitch_worker.js` aus AdBlock GX (Techniken nach [TTV-AB](https://github.com/GosuDRM/TTV-AB), MIT) – eine ExoPlayer-Datenquelle schreibt die Playlists um. Chat über IRC-WebSocket, Anmeldung per OAuth-Geräteanmeldung (twitch.tv/activate) |
 
 ## 📁 Projektstruktur
 
@@ -130,6 +152,7 @@ app/src/main/java/de/abilas/gxtube/
 │   ├── Account.kt / Sync.kt         # freiwillige Google-Anmeldung, Abgleich mit dem Konto
 │   ├── SponsorBlock.kt              # gesponserte Abschnitte
 │   ├── Http.kt / Models.kt
+├── twitch/                          # Twitch: Abfragen, Werbeblocker (ExoPlayer-Datenquelle), Chat, Konto, Folgen
 ├── cast/                            # Auf den PC streamen (GX Tube Desktop)
 │   ├── Cast.kt                      # Verbindung (WebSocket), Zustand und Warteschlange vom PC, Bedienung
 │   ├── CastDiscovery.kt             # PCs im WLAN finden (UDP-Broadcast)
@@ -144,6 +167,7 @@ app/src/main/java/de/abilas/gxtube/
     ├── App.kt                       # Navigation, untere Leiste
     ├── screens/                     # Startseite, Shorts, Abos, Du, Suche, Kanal, Playlist, Einstellungen
     ├── watch/                       # Video-Seite, Mini-Player, Bedienelemente, Kommentare
+    ├── twitch/                      # Twitch-Startseite, Folge ich, Suche, Kategorie, Kanal, Chat, Anmeldung
     ├── cast/                        # Streamen-Symbol, Geräteauswahl, Anzeige "Wird auf … abgespielt"
     └── components/                  # Video-Karten, Chips, Knöpfe …
 ```
@@ -151,4 +175,4 @@ app/src/main/java/de/abilas/gxtube/
 ## 📄 Lizenz
 
 GPL-3.0 (wie NewPipe und NewPipe Extractor, von denen Teile übernommen sind).
-GX Tube ist ein privates Projekt und steht in keiner Verbindung zu YouTube oder Google.
+GX Tube ist ein privates Projekt und steht in keiner Verbindung zu YouTube, Google oder Twitch.

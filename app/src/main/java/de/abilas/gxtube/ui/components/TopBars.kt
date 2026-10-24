@@ -47,6 +47,7 @@ import de.abilas.gxtube.R
 import de.abilas.gxtube.ui.LocalNav
 import de.abilas.gxtube.ui.cast.CastButton
 import de.abilas.gxtube.ui.theme.Yt
+import de.abilas.gxtube.ui.twitch.PlatformSwitch
 import kotlin.math.roundToInt
 
 /** Kopfzeile mit Logo und Suche – wie in der YouTube-App. */
@@ -69,6 +70,8 @@ fun AppTopBar(actions: @Composable RowScope.() -> Unit = {}) {
             letterSpacing = (-0.8).sp,
             color = Yt.colors.text,
         )
+        Spacer(Modifier.width(10.dp))
+        PlatformSwitch()
         Spacer(Modifier.weight(1f))
         CastButton()
         actions()

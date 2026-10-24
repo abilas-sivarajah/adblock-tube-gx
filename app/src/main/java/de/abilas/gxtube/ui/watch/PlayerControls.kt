@@ -399,8 +399,8 @@ fun PlayerSettingsSheet(now: NowPlaying, onDismiss: () -> Unit) {
                 SheetRow(
                     Icons.Outlined.HighQuality,
                     "Qualität",
-                    detail = if (now.isLive) "Automatisch" else now.options.firstOrNull { it.height == now.height }?.label ?: "${now.height}p",
-                ) { if (!now.isLive) page = "quality" }
+                    detail = if (now.isLive && !now.video.isTwitch) "Automatisch" else now.options.firstOrNull { it.height == now.height }?.label ?: "${now.height}p",
+                ) { if (!now.isLive || now.video.isTwitch) page = "quality" }
                 SheetRow(Icons.Outlined.Speed, "Wiedergabegeschwindigkeit", detail = if (speed == 1f) "Normal" else "${speed}×".replace('.', ',')) {
                     page = "speed"
                 }

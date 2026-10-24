@@ -23,10 +23,23 @@ data class VideoItem(
     val isLive: Boolean = false,
     val isShort: Boolean = false,
     val verified: Boolean = false,
+    /** Twitch: Kategorie (Anzeige-Name) und ihr Name für die Kategorie-Seite */
+    val game: String? = null,
+    val gameName: String? = null,
 ) {
-    val url: String get() = "https://www.youtube.com/watch?v=$id"
-    val shareUrl: String get() = if (isShort) "https://youtube.com/shorts/$id" else "https://youtu.be/$id"
-    val thumbnailOrDefault: String get() = thumbnail ?: "https://i.ytimg.com/vi/$id/hqdefault.jpg"
+    /** Twitch-Stream ('twitch:<login>') oder -VOD ('twitch-vod:<id>') statt YouTube-Video */
+    val isTwitch: Boolean get() = id.startsWith("twitch:") || id.startsWith("twitch-vod:")
+    val twitchLogin: String? get() = if (id.startsWith("twitch:")) id.removePrefix("twitch:") else channelUrl?.takeIf { it.startsWith("twitch:") }?.removePrefix("twitch:")
+
+    val url: String get() = when {
+        id.startsWith("twitch-vod:") -> "https://www.twitch.tv/videos/" + id.removePrefix("twitch-vod:")
+        id.startsWith("twitch:") -> "https://www.twitch.tv/" + id.removePrefix("twitch:")
+        else -> "https://www.youtube.com/watch?v=$id"
+    }
+    val shareUrl: String get() = if (isTwitch) url else if (isShort) "https://youtube.com/shorts/$id" else "https://youtu.be/$id"
+    val thumbnailOrDefault: String get() = thumbnail ?: if (id.startsWith("twitch:")) {
+        "https://static-cdn.jtvnw.net/previews-ttv/live_user_${id.removePrefix("twitch:")}-640x360.jpg"
+    } else "https://i.ytimg.com/vi/$id/hqdefault.jpg"
 
     /** Als Short markiert oder offensichtlich einer (#shorts im Titel, höchstens 3 Minuten) */
     val looksLikeShort: Boolean

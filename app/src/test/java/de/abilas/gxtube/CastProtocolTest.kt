@@ -53,6 +53,14 @@ class CastProtocolTest {
         assertEquals("true", obj(CastProtocol.add(rick, next = true))["next"]!!.jsonPrimitive.content)
         assertEquals("pause", obj(CastProtocol.simple("pause"))["type"]!!.jsonPrimitive.content)
 
+        // Twitch-Stream: ID und Kanal fürs Desktop-Protokoll
+        val tw = obj(CastProtocol.play(VideoItem(id = "twitch:trymacs", title = "Live", channelName = "Trymacs", channelUrl = "twitch:trymacs", isLive = true), emptyList(), null))
+        assertEquals("twitch:trymacs", tw["video"]!!.jsonObject["id"]!!.jsonPrimitive.content)
+        assertEquals("trymacs", tw["video"]!!.jsonObject["channelLogin"]!!.jsonPrimitive.content)
+        val vod = obj(CastProtocol.add(VideoItem(id = "twitch-vod:42", title = "VOD", channelUrl = "twitch:papaplatte", durationSec = 100), next = false))
+        assertEquals("papaplatte", vod["video"]!!.jsonObject["channelLogin"]!!.jsonPrimitive.content)
+        assertNull(play["video"]!!.jsonObject["channelLogin"])
+
         assertNull(obj(CastProtocol.fullscreen(null))["on"])
         assertEquals("true", obj(CastProtocol.fullscreen(true))["on"]!!.jsonPrimitive.content)
         assertEquals(2528732444L, obj(CastProtocol.display(2528732444L))["id"]!!.jsonPrimitive.long)
@@ -186,6 +194,16 @@ class CastProtocolTest {
         assertEquals(full.displayId, full.displays.first { it.id == full.displayId }.id)
         ws.send(CastProtocol.fullscreen(null))
         waitFor("Vollbild aus (umgeschaltet)") { m -> (m as? CastProtocol.Incoming.State)?.state?.takeIf { it.fullscreen == false } }
+
+        // Twitch (GX Tube Desktop ab 0.1.18): braucht Internet
+        if (System.getenv("GXTUBE_ONLINE_TESTS") == "1") {
+            val live = de.abilas.gxtube.twitch.TwitchApi.home("de").streams.first()
+            ws.send(CastProtocol.play(live, emptyList(), null))
+            val tw = waitFor("Twitch-Stream") { m -> (m as? CastProtocol.Incoming.State)?.state?.takeIf { it.video?.id == live.id && it.video?.platform == "twitch" && it.status == "playing" } }
+            println("[Twitch] ${tw.status} ${tw.video?.title} (${tw.video?.channelLogin}), live: ${tw.isLive}")
+            assertTrue(tw.isLive)
+            assertEquals(live.twitchLogin, tw.video?.toVideoItem()?.twitchLogin)
+        }
 
         ws.send(CastProtocol.simple("stop"))
         waitFor("idle") { m -> (m as? CastProtocol.Incoming.State)?.state?.takeIf { it.video == null && it.status == "idle" } }

@@ -29,9 +29,16 @@ object Sync {
     fun subscription(channelUrl: String, subscribed: Boolean) =
         run(if (subscribed) "Abo" else "Abo beenden") { Account.setSubscribed(channelUrl, subscribed) }
 
-    fun rating(videoId: String, rating: Account.Rating) = run("Bewertung") { Account.rate(videoId, rating) }
+    // Twitch-Streams gibt es im YouTube-Konto nicht
+    private fun youtube(id: String) = !id.startsWith("twitch")
 
-    fun watchLater(videoId: String, add: Boolean) = run("\"Später ansehen\"") { Account.setWatchLater(videoId, add) }
+    fun rating(videoId: String, rating: Account.Rating) {
+        if (youtube(videoId)) run("Bewertung") { Account.rate(videoId, rating) }
+    }
+
+    fun watchLater(videoId: String, add: Boolean) {
+        if (youtube(videoId)) run("\"Später ansehen\"") { Account.setWatchLater(videoId, add) }
+    }
 
     /** Abos aus dem Konto in die lokale Liste übernehmen. Gibt die Zahl neuer Abos zurück. */
     suspend fun importSubscriptions(): Int {

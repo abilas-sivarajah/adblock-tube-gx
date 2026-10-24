@@ -11,6 +11,8 @@ import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.data.NewPipeDownloader
 import de.abilas.gxtube.data.SubscriptionFeed
 import de.abilas.gxtube.player.PlayerController
+import de.abilas.gxtube.twitch.TwitchAccount
+import de.abilas.gxtube.twitch.TwitchPlayer
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.localization.ContentCountry
 import org.schabi.newpipe.extractor.localization.Localization
@@ -21,6 +23,8 @@ class GxTubeApp : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         Library.init(this)
         Account.init(this)
+        TwitchAccount.init(this)
+        TwitchPlayer.init(this)
         SubscriptionFeed.init(this)
         applyRegion()
         PlayerController.init(this)

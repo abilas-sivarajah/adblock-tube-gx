@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.outlined.AccountCircle
@@ -79,6 +81,14 @@ import de.abilas.gxtube.ui.screens.YouScreen
 import de.abilas.gxtube.ui.theme.GxTubeTheme
 import de.abilas.gxtube.ui.theme.Yt
 import de.abilas.gxtube.ui.theme.isDarkTheme
+import de.abilas.gxtube.ui.twitch.TwitchCategoryScreen
+import de.abilas.gxtube.ui.twitch.TwitchChannelScreen
+import de.abilas.gxtube.ui.twitch.TwitchFollowingScreen
+import de.abilas.gxtube.ui.twitch.TwitchHomeScreen
+import de.abilas.gxtube.ui.twitch.TwitchLoginScreen
+import de.abilas.gxtube.ui.twitch.TwitchSearchScreen
+import de.abilas.gxtube.twitch.TwitchApi
+import de.abilas.gxtube.twitch.TwitchFollows
 import de.abilas.gxtube.ui.watch.WatchOverlay
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -126,6 +136,9 @@ fun AppRoot(inPip: Boolean) {
             Cast.messages.collect { snackbar.showSnackbar(it) }
         }
         LaunchedEffect(Unit) {
+            TwitchFollows.messages.collect { snackbar.showSnackbar(it) }
+        }
+        LaunchedEffect(Unit) {
             IntentRouter.pending.collect { target ->
                 if (target == null) return@collect
                 IntentRouter.pending.value = null
@@ -133,10 +146,19 @@ fun AppRoot(inPip: Boolean) {
                     target.startsWith("channel:") -> nav.openChannel(target.removePrefix("channel:"))
                     target.startsWith("playlist:") -> nav.openPlaylist(target.removePrefix("playlist:"))
                     target.startsWith("search:") -> nav.openSearch(target.removePrefix("search:"))
+                    target.startsWith("twitch-channel:") -> nav.openTwitchChannel(target.removePrefix("twitch-channel:"))
                     target.startsWith("route:") -> when (val r = target.removePrefix("route:")) {
                         Routes.SHORTS -> if (Library.settings.shortsEnabled) nav.openTab(r)
                         in Routes.tabs -> nav.openTab(r)
                         "settings" -> nav.openSettings()
+                        // YouTube | Twitch umschalten (z. B. für Screenshots: --es gxtube_route twitch)
+                        "twitch", "youtube" -> {
+                            Library.updateSettings { it.copy(platform = r) }
+                            nav.openTab(Routes.HOME)
+                        }
+                        "twitch-login" -> nav.openTwitchLogin()
+                        // Beliebtester deutscher Twitch-Stream (für Screenshots)
+                        "twitch-live" -> runCatching { TwitchApi.home("de").streams.firstOrNull() }.getOrNull()?.let { nav.openVideo(it) }
                         "cast" -> CastLaunch.open.value = true
                         else -> nav.openLibrary(r)
                     }
@@ -157,7 +179,7 @@ fun AppRoot(inPip: Boolean) {
                             AppNavHost(navController)
                         }
                         if (!fullscreen) {
-                            BottomBar(route, lib.settings.shortsEnabled) { nav.openTab(it) }
+                            BottomBar(route, lib.settings.shortsEnabled, lib.settings.platform == "twitch") { nav.openTab(it) }
                         }
                     }
                 }
@@ -199,9 +221,10 @@ private fun SystemBars(darkIcons: Boolean, hidden: Boolean) {
 @Composable
 private fun AppNavHost(navController: androidx.navigation.NavHostController) {
     NavHost(navController = navController, startDestination = Routes.HOME) {
-        composable(Routes.HOME) { HomeScreen() }
+        // Startseite und Abos: YouTube oder Twitch, je nach Umschalter oben
+        composable(Routes.HOME) { if (twitchMode()) TwitchHomeScreen() else HomeScreen() }
         composable(Routes.SHORTS) { ShortsScreen() }
-        composable(Routes.SUBSCRIPTIONS) { SubscriptionsScreen() }
+        composable(Routes.SUBSCRIPTIONS) { if (twitchMode()) TwitchFollowingScreen() else SubscriptionsScreen() }
         composable(Routes.YOU) { YouScreen() }
         composable(
             Routes.SEARCH,
@@ -219,11 +242,31 @@ private fun AppNavHost(navController: androidx.navigation.NavHostController) {
         composable(Routes.SETTINGS) { SettingsScreen() }
         composable(Routes.MANAGE_SUBS) { ManageSubscriptionsScreen() }
         composable(Routes.LOGIN) { LoginScreen() }
+        composable(
+            Routes.TWITCH_SEARCH,
+            arguments = listOf(navArgument("q") { type = NavType.StringType; defaultValue = "" }),
+        ) { entry -> TwitchSearchScreen(entry.arguments?.getString("q").orEmpty()) }
+        composable(
+            Routes.TWITCH_CHANNEL,
+            arguments = listOf(navArgument("login") { type = NavType.StringType; defaultValue = "" }),
+        ) { entry -> TwitchChannelScreen(entry.arguments?.getString("login").orEmpty()) }
+        composable(
+            Routes.TWITCH_CATEGORY,
+            arguments = listOf(navArgument("name") { type = NavType.StringType; defaultValue = "" }),
+        ) { entry -> TwitchCategoryScreen(entry.arguments?.getString("name").orEmpty()) }
+        composable(Routes.TWITCH_LOGIN) { TwitchLoginScreen() }
     }
 }
 
+/** Umschalter oben auf Twitch? (Der Navigationsgraph bleibt gleich, nur die Seite wechselt.) */
 @Composable
-private fun BottomBar(route: String?, shortsEnabled: Boolean, onSelect: (String) -> Unit) {
+private fun twitchMode(): Boolean {
+    val lib by Library.data.collectAsStateWithLifecycle()
+    return lib.settings.platform == "twitch"
+}
+
+@Composable
+private fun BottomBar(route: String?, shortsEnabled: Boolean, twitch: Boolean, onSelect: (String) -> Unit) {
     val c = Yt.colors
     Column(Modifier.background(c.background)) {
         HorizontalDivider(color = c.divider, thickness = 0.5.dp)
@@ -234,12 +277,17 @@ private fun BottomBar(route: String?, shortsEnabled: Boolean, onSelect: (String)
         ) {
             BottomItem("Startseite", route == Routes.HOME,
                 rememberVectorPainter(Icons.Filled.Home), rememberVectorPainter(Icons.Outlined.Home)) { onSelect(Routes.HOME) }
-            if (shortsEnabled) {
+            if (shortsEnabled && !twitch) {
                 BottomItem("Shorts", route == Routes.SHORTS,
                     painterResource(R.drawable.ic_shorts_filled), painterResource(R.drawable.ic_shorts)) { onSelect(Routes.SHORTS) }
             }
-            BottomItem("Abos", route == Routes.SUBSCRIPTIONS,
-                rememberVectorPainter(Icons.Filled.Subscriptions), rememberVectorPainter(Icons.Outlined.Subscriptions)) { onSelect(Routes.SUBSCRIPTIONS) }
+            if (twitch) {
+                BottomItem("Folge ich", route == Routes.SUBSCRIPTIONS,
+                    rememberVectorPainter(Icons.Filled.Favorite), rememberVectorPainter(Icons.Outlined.FavoriteBorder)) { onSelect(Routes.SUBSCRIPTIONS) }
+            } else {
+                BottomItem("Abos", route == Routes.SUBSCRIPTIONS,
+                    rememberVectorPainter(Icons.Filled.Subscriptions), rememberVectorPainter(Icons.Outlined.Subscriptions)) { onSelect(Routes.SUBSCRIPTIONS) }
+            }
             BottomItem("Du", route == Routes.YOU,
                 rememberVectorPainter(Icons.Filled.AccountCircle), rememberVectorPainter(Icons.Outlined.AccountCircle)) { onSelect(Routes.YOU) }
         }

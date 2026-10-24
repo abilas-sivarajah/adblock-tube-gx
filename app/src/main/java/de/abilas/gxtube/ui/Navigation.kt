@@ -22,6 +22,10 @@ object Routes {
     const val SETTINGS = "settings"
     const val MANAGE_SUBS = "manage_subscriptions"
     const val LOGIN = "login"
+    const val TWITCH_SEARCH = "twitch/search?q={q}"
+    const val TWITCH_CHANNEL = "twitch/channel?login={login}"
+    const val TWITCH_CATEGORY = "twitch/category?name={name}"
+    const val TWITCH_LOGIN = "twitch/login"
 
     val tabs = listOf(HOME, SHORTS, SUBSCRIPTIONS, YOU)
 }
@@ -40,8 +44,25 @@ class AppNav(private val nav: NavHostController) {
 
     fun openChannel(url: String?) {
         if (url.isNullOrBlank()) return
+        // Twitch-Kanäle stehen als "twitch:<login>" in den Videos
+        if (url.startsWith("twitch:")) return openTwitchChannel(url.removePrefix("twitch:"))
         PlayerController.expanded.value = false
         nav.navigate("channel?url=" + Uri.encode(url))
+    }
+
+    fun openTwitchChannel(login: String) {
+        PlayerController.expanded.value = false
+        nav.navigate("twitch/channel?login=" + Uri.encode(login))
+    }
+
+    fun openTwitchCategory(name: String) {
+        PlayerController.expanded.value = false
+        nav.navigate("twitch/category?name=" + Uri.encode(name))
+    }
+
+    fun openTwitchLogin() {
+        PlayerController.expanded.value = false
+        nav.navigate(Routes.TWITCH_LOGIN)
     }
 
     fun openPlaylist(url: String) {
@@ -49,8 +70,10 @@ class AppNav(private val nav: NavHostController) {
         nav.navigate("playlist?url=" + Uri.encode(url))
     }
 
+    /** Suche – auf YouTube oder Twitch, je nach Umschalter oben. */
     fun openSearch(query: String = "") {
-        nav.navigate("search?q=" + Uri.encode(query))
+        val twitch = Library.settings.platform == "twitch"
+        nav.navigate((if (twitch) "twitch/search?q=" else "search?q=") + Uri.encode(query))
     }
 
     fun openLibrary(kind: String) = nav.navigate("library/$kind")

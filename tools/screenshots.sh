@@ -68,7 +68,24 @@ sleep 6
 adb exec-out screencap -p > "$OUT/14_streamen_getippt.png"
 adb shell input keyevent KEYCODE_BACK
 
+# Twitch: Umschalter oben, Startseite, Live-Stream mit Werbeblocker und Chat, Anmeldung
+adb shell cmd uimode night no
+route twitch
+shot 15_twitch_startseite 25
+adb shell input swipe 540 1700 540 700 400
+shot 16_twitch_gescrollt 6
+route twitch-live
+shot 17_twitch_live 40
+shot 18_twitch_live_spaeter 30
+adb shell input keyevent KEYCODE_BACK
+route subscriptions
+shot 19_twitch_folge_ich 8
+route twitch-login
+shot 20_twitch_anmelden 12
+route youtube
+sleep 3
+
 adb logcat -d > "$OUT/logcat_full.txt" || true
-grep -E "gxtube|AndroidRuntime|PlayerController|StreamResolver|ExoPlayer|MediaCodec|FATAL" "$OUT/logcat_full.txt" | tail -800 > "$OUT/logcat.txt" || true
+grep -E "gxtube|AndroidRuntime|PlayerController|StreamResolver|ExoPlayer|MediaCodec|FATAL|Twitch" "$OUT/logcat_full.txt" | tail -800 > "$OUT/logcat.txt" || true
 rm -f "$OUT/logcat_full.txt"
 ls -la "$OUT"

@@ -25,6 +25,16 @@ data class Subscription(
     val addedAt: Long = System.currentTimeMillis(),
 )
 
+/** Twitch-Kanal, dem man folgt (auf dem Handy; mit Twitch-Konto auch dort). */
+@Serializable
+data class TwitchFollow(
+    val login: String,
+    val userId: String? = null,
+    val name: String,
+    val avatar: String? = null,
+    val addedAt: Long = System.currentTimeMillis(),
+)
+
 @Serializable
 data class HistoryEntry(
     val video: VideoItem,
@@ -58,6 +68,12 @@ data class Settings(
     val shortsEnabled: Boolean = true,
     /** Beim Öffnen der App auf GitHub nach einer neuen Version suchen */
     val autoUpdateCheck: Boolean = true,
+    /** "youtube" oder "twitch" – Umschalter oben links */
+    val platform: String = "youtube",
+    /** Beliebte Twitch-Streams: "de", "en" oder "" (alle Sprachen) */
+    val twitchLanguage: String = "de",
+    /** Chat unter Twitch-Live-Streams zeigen */
+    val twitchChat: Boolean = true,
 )
 
 /** Shorts herausfiltern, wenn sie in den Einstellungen ausgeschaltet sind. */
@@ -76,6 +92,7 @@ data class LibraryData(
     val recommendations: List<VideoItem> = emptyList(),
     /** "Kein Interesse" */
     val hidden: Set<String> = emptySet(),
+    val twitchFollows: List<TwitchFollow> = emptyList(),
     val settings: Settings = Settings(),
 )
 

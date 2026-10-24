@@ -50,6 +50,12 @@ jobs:
           GXTUBE_ONLINE_TESTS: '1'
         run: ./gradlew testDebugUnitTest --tests 'de.abilas.gxtube.OnlineSmokeTest' --rerun
 
+      - name: Twitch-Werbeblocker mit echtem Stream (nur Info)
+        continue-on-error: true
+        env:
+          GXTUBE_ONLINE_TESTS: '1'
+        run: ./gradlew testDebugUnitTest --tests 'de.abilas.gxtube.TwitchAdBlockTest' --rerun
+
       - name: Änderung für die Release-Notiz
         run: echo "CHANGES=$(git log -1 --format=%s | tr -d '\r')" >> "$GITHUB_ENV"
 

@@ -73,6 +73,8 @@ object CastProtocol {
         v.thumbnail?.let { put("thumbnail", it) }
         put("durationSec", v.durationSec)
         put("isLive", v.isLive)
+        // Twitch ('twitch:<login>' / 'twitch-vod:<id>'): Kanal für die Anzeige am PC
+        v.twitchLogin?.let { put("channelLogin", it) }
     }
 
     private inline fun msg(type: String, body: JsonObjectBuilder.() -> Unit): String =
@@ -149,11 +151,15 @@ data class RemoteVideo(
     val durationSec: Long = -1,
     val isLive: Boolean = false,
     val autoplay: Boolean = false,
+    /** Twitch: Kanal (Login) und "platform": "twitch" */
+    val channelLogin: String? = null,
+    val platform: String? = null,
 ) {
     fun toVideoItem() = VideoItem(
         id = id,
         title = title,
         channelName = channelName,
+        channelUrl = channelLogin?.let { "twitch:$it" },
         thumbnail = thumbnail,
         durationSec = durationSec,
         isLive = isLive,

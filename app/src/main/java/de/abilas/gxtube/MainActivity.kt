@@ -116,6 +116,16 @@ class MainActivity : ComponentActivity() {
         }
         val text = intent?.dataString ?: intent?.getStringExtra(Intent.EXTRA_TEXT) ?: return
         val url = Regex("""https?://\S+""").find(text)?.value ?: text.trim()
+        // Twitch-Link geteilt (twitch.tv/<kanal> bzw. twitch.tv/videos/<id>)
+        Regex("""https?://(?:www\.|m\.)?twitch\.tv/(?:videos/(\d{1,15})|([A-Za-z0-9_]{1,25}))(?=[/?#]|$)""").find(url)?.let { m ->
+            val vod = m.groupValues[1]
+            val login = m.groupValues[2].lowercase()
+            when {
+                vod.isNotEmpty() -> PlayerController.play(VideoItem(id = "twitch-vod:$vod", title = ""))
+                login !in TWITCH_PAGES -> IntentRouter.pending.value = "twitch-channel:$login"
+            }
+            return
+        }
         val id = videoIdOf(url)
         val seconds = Regex("""[?&#]t=(\d+)""").find(url)?.groupValues?.get(1)?.toLongOrNull()
         val search = Regex("""[?&]search_query=([^&]+)""").find(url)?.groupValues?.get(1)
@@ -130,6 +140,11 @@ class MainActivity : ComponentActivity() {
             url.contains("/channel/") || url.contains("/@") || url.contains("/c/") || url.contains("/user/") ->
                 IntentRouter.pending.value = "channel:$url"
         }
+    }
+
+    private companion object {
+        /** twitch.tv-Seiten, die kein Kanal sind */
+        val TWITCH_PAGES = setOf("directory", "activate", "settings", "subscriptions", "inventory", "drops", "search", "downloads", "p", "jobs", "turbo", "login", "signup", "videos")
     }
 
     private fun askForNotifications() {

@@ -28,6 +28,12 @@ import de.abilas.gxtube.data.SponsorSegment
 import de.abilas.gxtube.data.VideoItem
 import de.abilas.gxtube.data.YouTubeRepo
 import de.abilas.gxtube.data.bestUrl
+import de.abilas.gxtube.twitch.TwitchAccount
+import de.abilas.gxtube.twitch.TwitchApi
+import de.abilas.gxtube.twitch.TwitchException
+import de.abilas.gxtube.twitch.TwitchPlayer
+import de.abilas.gxtube.twitch.TwitchWatchInfo
+import kotlinx.coroutines.async
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -62,6 +68,8 @@ data class NowPlaying(
     val isLive: Boolean = false,
     val queue: List<VideoItem> = emptyList(),
     val queueIndex: Int = -1,
+    /** Twitch: Stream/VOD und Kanal (Zuschauer, Follower, Kategorie) */
+    val twitch: TwitchWatchInfo? = null,
 )
 
 /**
@@ -121,6 +129,12 @@ object PlayerController {
     fun init(application: Application) {
         app = application
         observeCast()
+        // Twitch-Werbung, die nicht durch Schwarzbild ersetzt werden kann, läuft stumm darunter
+        scope.launch {
+            TwitchPlayer.ads.collect { a ->
+                if (_now.value?.video?.isTwitch == true && !_remote.value) player.volume = if (a.masked && !a.hold) 0f else 1f
+            }
+        }
     }
 
     private fun createPlayer(): ExoPlayer {
@@ -220,6 +234,13 @@ object PlayerController {
         player.repeatMode = if (shorts) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
         val queueIndex = queue.indexOfFirst { it.id == video.id }
         _now.value = NowPlaying(video = video, queue = queue, queueIndex = queueIndex)
+        // Qualitätswahl von Twitch gilt nicht für das nächste Video
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().clearVideoSizeConstraints().build()
+
+        if (video.isTwitch) {
+            loadJob = scope.launch { loadTwitch(video, startMs, queue, queueIndex, autoPlay) }
+            return
+        }
 
         loadJob = scope.launch {
             try {
@@ -291,6 +312,81 @@ object PlayerController {
         isShort = video.isShort || info.isShortFormContent,
         verified = info.isUploaderVerified,
     )
+
+    // ------------------------------------------------------------ Twitch
+
+    /** Twitch-Stream oder -VOD: Infos und Wiedergabe-Adresse gleichzeitig, die Werbung filtert [TwitchPlayer]. */
+    private suspend fun loadTwitch(video: VideoItem, startMs: Long?, queue: List<VideoItem>, queueIndex: Int, autoPlay: Boolean) {
+        try {
+            TwitchPlayer.reset()
+            TwitchAccount.ensureFresh()
+            val infoJob = scope.async { runCatching { TwitchApi.watchInfo(video.id) } }
+            val play = runCatching { TwitchApi.playback(video.id) }
+            val info = infoJob.await()
+            // Offline: lieber das sagen als einen HTTP-Fehler
+            (info.exceptionOrNull() as? TwitchException)?.takeIf { it.code == "offline" }?.let { throw it }
+            val p = play.getOrThrow()
+            val w = info.getOrNull()
+            val enriched = w?.video?.let { v ->
+                video.copy(
+                    title = v.title.ifBlank { video.title },
+                    channelName = v.channelName.ifBlank { video.channelName },
+                    channelUrl = v.channelUrl ?: video.channelUrl,
+                    channelAvatar = v.channelAvatar ?: video.channelAvatar,
+                    thumbnail = video.thumbnail ?: v.thumbnail,
+                    durationSec = if (p.isLive) -1 else v.durationSec.takeIf { it > 0 } ?: video.durationSec,
+                    viewCount = v.viewCount,
+                    uploadedAt = v.uploadedAt ?: video.uploadedAt,
+                    isLive = p.isLive,
+                    game = v.game ?: video.game,
+                    gameName = v.gameName ?: video.gameName,
+                )
+            } ?: video.copy(isLive = p.isLive)
+            val source = TwitchPlayer.source(p.url, mediaItem(enriched))
+            val resume = if (p.isLive) 0L else startMs ?: resumePosition(enriched.id, enriched.durationSec * 1000)
+            if (p.isLive) player.setMediaSource(source, true) else player.setMediaSource(source, resume)
+            player.setPlaybackSpeed(if (p.isLive) 1f else _speed.value)
+            player.prepare()
+            player.playWhenReady = autoPlay
+            _now.value = NowPlaying(
+                video = enriched,
+                loading = false,
+                options = listOf(StreamResolver.VideoOption(0, "Automatisch")),
+                height = 0,
+                isLive = p.isLive,
+                queue = queue,
+                queueIndex = queueIndex,
+                twitch = w,
+            )
+            ensureService()
+            startTicker()
+            Library.recordWatch(enriched, resume, enriched.durationSec * 1000)
+            // Qualitätsstufen stehen fest, sobald ExoPlayer die Master-Playlist geladen hat
+            repeat(40) {
+                delay(500)
+                val list = TwitchPlayer.variants(p.login, p.vod)
+                if (list.isNotEmpty()) {
+                    val opts = listOf(StreamResolver.VideoOption(0, "Automatisch")) +
+                        list.map { (h, fps) -> StreamResolver.VideoOption(h, "${h}p" + if (fps >= 50) fps.toString() else "") }
+                    _now.update { n -> if (n?.video?.id == enriched.id) n.copy(options = opts) else n }
+                    return
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            Log.e(TAG, "Twitch-Stream konnte nicht geladen werden", t)
+            _now.update { n -> n?.copy(loading = false, error = t.message ?: "Stream konnte nicht geladen werden") }
+        }
+    }
+
+    /** Twitch: Höhe festlegen (0 = automatisch) – ExoPlayer wählt aus den HLS-Varianten. */
+    private fun setTwitchQuality(height: Int) {
+        val b = player.trackSelectionParameters.buildUpon()
+        if (height <= 0) b.clearVideoSizeConstraints() else b.setMaxVideoSize(Int.MAX_VALUE, height).setMinVideoSize(0, height)
+        player.trackSelectionParameters = b.build()
+        _now.update { it?.copy(height = height) }
+    }
 
     private fun mediaItem(video: VideoItem): MediaItem = MediaItem.Builder()
         .setMediaId(video.id)
@@ -365,6 +461,7 @@ object PlayerController {
 
     fun setQuality(height: Int) {
         val n = _now.value ?: return
+        if (n.video.isTwitch) return setTwitchQuality(height)
         val info = n.info ?: return
         qualityOverride = height
         val pos = player.currentPosition
@@ -436,6 +533,13 @@ object PlayerController {
     private fun handleError(error: PlaybackException) {
         Log.e(TAG, "Wiedergabefehler", error)
         val n = _now.value ?: return
+        if (n.video.isTwitch && error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
+            // Zu weit hinter dem Live-Rand (z. B. nach langem Puffern): wieder live einsteigen
+            TwitchPlayer.onStalled()
+            player.seekToDefaultPosition()
+            player.prepare()
+            return
+        }
         val http = generateSequence<Throwable>(error) { it.cause }
             .filterIsInstance<HttpDataSource.InvalidResponseCodeException>().firstOrNull()
         // Abgelaufene oder gesperrte Stream-URL: einmal frisch laden
@@ -445,7 +549,8 @@ object PlayerController {
             return
         }
         val text = when {
-            http != null -> "YouTube hat den Stream abgelehnt (HTTP ${http.responseCode})."
+            n.video.isTwitch && http?.responseCode == 404 && n.isLive -> "${n.video.channelName.ifBlank { "Der Kanal" }} ist gerade nicht live."
+            http != null -> "${if (n.video.isTwitch) "Twitch" else "YouTube"} hat den Stream abgelehnt (HTTP ${http.responseCode})."
             error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED -> "Keine Internetverbindung."
             else -> "Wiedergabefehler: ${error.errorCodeName}"
         }
@@ -609,6 +714,18 @@ object PlayerController {
     /** Titel, Beschreibung, Kommentare, ähnliche Videos – abgespielt wird am PC. */
     private fun loadRemoteDetails(video: VideoItem, positionMs: Long) {
         castDetailsJob?.cancel()
+        if (video.isTwitch) {
+            castDetailsJob = scope.launch {
+                runCatching { TwitchApi.watchInfo(video.id) }
+                    .onSuccess { w ->
+                        val v = w.video.copy(thumbnail = video.thumbnail ?: w.video.thumbnail)
+                        _now.update { n -> if (n?.video?.id != video.id) n else n.copy(video = v, loading = false, isLive = v.isLive, twitch = w) }
+                        Library.recordWatch(v, positionMs, v.durationSec * 1000)
+                    }
+                    .onFailure { _now.update { n -> if (n?.video?.id == video.id) n.copy(loading = false) else n } }
+            }
+            return
+        }
         castDetailsJob = scope.launch {
             try {
                 val info = YouTubeRepo.stream(video.url)
