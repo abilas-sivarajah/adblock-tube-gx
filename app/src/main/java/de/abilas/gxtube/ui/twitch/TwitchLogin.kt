@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -169,7 +170,7 @@ fun TwitchLoginScreen(vm: TwitchLoginViewModel = viewModel()) {
                     }
                     Spacer(Modifier.height(20.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(color = TwitchPurple, strokeWidth = 2.dp, modifier = Modifier.height(16.dp))
+                        CircularProgressIndicator(color = TwitchPurple, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.padding(4.dp))
                         Text("Warte auf die Bestätigung …", color = Yt.colors.textSecondary, fontSize = 13.sp)
                     }

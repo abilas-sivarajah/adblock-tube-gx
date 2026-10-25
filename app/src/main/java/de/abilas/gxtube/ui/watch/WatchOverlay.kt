@@ -222,7 +222,8 @@ fun WatchOverlay(inPip: Boolean, fullscreen: Boolean) {
                 }
             }
 
-            if (p < 0.3f) {
+            // Bei Live-Streams gibt es kein Ende – also auch keinen Fortschritt
+            if (p < 0.3f && !n.isLive) {
                 MiniProgress(Modifier.align(Alignment.BottomStart))
             }
         }
