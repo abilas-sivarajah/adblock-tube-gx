@@ -409,8 +409,64 @@ object TwitchApi {
 
     // ------------------------------------------------------------ Mit Konto
 
-    /** Kanäle, denen das Konto folgt. */
-    suspend fun followedChannels(limit: Int = 300): List<TwitchChannel> {
+    /**
+     * Kanäle, denen das Konto folgt: über die offizielle Twitch-API (Berechtigung "user:read:follows"),
+     * sonst über GraphQL. [userId]: das angemeldete Konto.
+     */
+    suspend fun followedChannels(userId: String?): List<TwitchChannel> {
+        var helixError: Exception? = null
+        if (userId != null) {
+            try {
+                return followedHelix(userId)
+            } catch (e: TwitchException) {
+                if (e.code == "401") throw e
+                helixError = e
+            }
+        }
+        val list = try {
+            followedGql()
+        } catch (e: Exception) {
+            throw helixError ?: e
+        }
+        // GraphQL kennt das Konto nicht (currentUser leer) – dann lieber den Fehler der offiziellen API zeigen
+        if (list.isEmpty() && helixError != null) throw helixError
+        return list
+    }
+
+    /** Gefolgte über Helix: GET /helix/channels/followed (Bilder und Live-Status kommen danach über [users]). */
+    suspend fun followedHelix(userId: String, limit: Int = 2000): List<TwitchChannel> = withContext(Dispatchers.IO) {
+        val account = auth?.invoke() ?: throw TwitchException("Nicht bei Twitch angemeldet", signIn = true)
+        val out = ArrayList<TwitchChannel>()
+        var after: String? = null
+        while (out.size < limit) {
+            val url = "https://api.twitch.tv/helix/channels/followed?user_id=$userId&first=100" +
+                (after?.let { "&after=" + URLEncoder.encode(it, "UTF-8") } ?: "")
+            val req = Request.Builder().url(url)
+                .header("Client-Id", account.second)
+                .header("Authorization", "Bearer ${account.first}")
+                .build()
+            val (code, j) = Http.client.newCall(req).execute().use { r ->
+                r.code to runCatching { json.parseToJsonElement(r.body.string()).jsonObject }.getOrNull()
+            }
+            val message = j?.get("message").str.orEmpty()
+            if (code == 401) {
+                // Fehlende Berechtigung heißt nicht, dass die Anmeldung abgelaufen ist
+                if (message.contains("scope", true)) throw TwitchException("Twitch erlaubt das Lesen der gefolgten Kanäle nicht ($message)", "scope", signIn = true)
+                onUnauthorized()
+                throw TwitchException("Twitch-Anmeldung abgelaufen", "401", signIn = true)
+            }
+            if (code !in 200..299 || j == null) throw TwitchException("Twitch-API: HTTP $code ${message}".trim())
+            (j["data"] as? JsonArray)?.forEach { e ->
+                val o = e.obj ?: return@forEach
+                val login = o["broadcaster_login"].str?.lowercase() ?: return@forEach
+                out += TwitchChannel(login, o["broadcaster_id"].str, o["broadcaster_name"].str ?: login, null)
+            }
+            after = j["pagination"].obj?.get("cursor").str ?: break
+        }
+        out
+    }
+
+    private suspend fun followedGql(limit: Int = 300): List<TwitchChannel> {
         val out = ArrayList<TwitchChannel>()
         var after: String? = null
         while (out.size < limit) {

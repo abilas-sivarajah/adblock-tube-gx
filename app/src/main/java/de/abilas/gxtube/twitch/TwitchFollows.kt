@@ -8,6 +8,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
@@ -19,6 +22,12 @@ object TwitchFollows {
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
+
+    /** Abgleich mit dem Twitch-Konto: läuft, Fehler oder Anzahl übernommener Kanäle. */
+    data class SyncState(val running: Boolean = false, val error: String? = null, val count: Int? = null)
+
+    private val _sync = MutableStateFlow(SyncState())
+    val sync: StateFlow<SyncState> = _sync.asStateFlow()
 
     fun isFollowing(data: LibraryData, login: String?) = login != null && data.twitchFollows.any { it.login == login }
 
@@ -44,12 +53,22 @@ object TwitchFollows {
 
     /** Gefolgte aus dem Twitch-Konto dazunehmen (Namen und Bilder auffrischen). */
     fun syncFromAccount() {
-        if (!TwitchAccount.loggedIn) return
+        if (!TwitchAccount.loggedIn || _sync.value.running) return
+        _sync.value = SyncState(running = true)
         scope.launch {
             runCatching {
                 TwitchAccount.ensureFresh()
-                merge(TwitchApi.followedChannels())
-            }.onFailure { Log.w(TAG, "Gefolgte nicht geladen", it) }
+                val account = TwitchAccount.state.value ?: throw TwitchException("Nicht bei Twitch angemeldet", signIn = true)
+                // Konto-Nummer fehlt (ältere Anmeldung)? Bei Twitch nachfragen
+                val userId = account.user.id ?: TwitchApi.validate(account.tokens.accessToken)?.userId
+                TwitchApi.followedChannels(userId).also { merge(it) }
+            }.onSuccess { list ->
+                Log.i(TAG, "${list.size} gefolgte Kanäle aus dem Konto")
+                _sync.value = SyncState(count = list.size)
+            }.onFailure {
+                Log.w(TAG, "Gefolgte nicht geladen", it)
+                _sync.value = SyncState(error = it.message ?: it.toString())
+            }
         }
     }
 

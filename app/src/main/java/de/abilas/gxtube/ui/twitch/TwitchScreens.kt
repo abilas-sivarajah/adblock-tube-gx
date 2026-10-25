@@ -331,12 +331,21 @@ class TwitchHomeViewModel : ViewModel() {
         setLanguage(code)
         load()
     }
+
+    fun refreshFollowed() {
+        viewModelScope.launch {
+            runCatching { TwitchFollows.withLiveStatus() }.onSuccess { list -> followedLive = list.mapNotNull { it.live } }
+        }
+    }
 }
 
 @Composable
 fun TwitchHomeScreen(vm: TwitchHomeViewModel = viewModel()) {
     val nav = LocalNav.current
     val listState = rememberLazyListState()
+    val lib by Library.data.collectAsStateWithLifecycle()
+    // Gefolgte aus dem Konto kommen nach dem Anmelden dazu
+    LaunchedEffect(lib.twitchFollows.size) { if (lib.twitchFollows.isNotEmpty()) vm.refreshFollowed() }
     LoadMoreEffect(listState, enabled = vm.streams.next != null) { vm.streams.loadMore() }
     LaunchedEffect(vm.language) { listState.scrollToItem(0) }
 
@@ -412,7 +421,8 @@ fun TwitchFollowingScreen(vm: TwitchFollowingViewModel = viewModel()) {
     val nav = LocalNav.current
     val lib by Library.data.collectAsStateWithLifecycle()
     val account by TwitchAccount.state.collectAsStateWithLifecycle()
-    // Neu gefolgt oder entfolgt: Liste auffrischen
+    val sync by TwitchFollows.sync.collectAsStateWithLifecycle()
+    // Neu gefolgt oder entfolgt (oder aus dem Konto übernommen): Liste auffrischen
     LaunchedEffect(lib.twitchFollows.size) { vm.load() }
     val follows = lib.twitchFollows.map { it.login }.toSet()
     val shown = vm.channels.filter { it.login in follows }
@@ -424,17 +434,35 @@ fun TwitchFollowingScreen(vm: TwitchFollowingViewModel = viewModel()) {
     ) {
         AppTopBar()
         when {
+            lib.twitchFollows.isEmpty() && sync.running -> Column(Modifier.fillMaxWidth().padding(top = 60.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                LoadingBox()
+                Text("Deine gefolgten Kanäle werden von Twitch geholt …", color = Yt.colors.textSecondary, fontSize = 14.sp)
+            }
+            lib.twitchFollows.isEmpty() && account?.expired == false && sync.error != null ->
+                ErrorBox("Deine gefolgten Kanäle konnten nicht von Twitch geholt werden:\n${sync.error}", onRetry = { TwitchFollows.syncFromAccount() })
             lib.twitchFollows.isEmpty() -> EmptyBox(
                 Icons.Outlined.FavoriteBorder,
                 "Noch keinem Kanal gefolgt",
-                if (account == null) "Tippe auf einem Kanal auf „Folgen“ – oder melde dich bei Twitch an, dann kommen deine gefolgten Kanäle von selbst."
-                else "Tippe auf einem Kanal auf „Folgen“.",
+                when {
+                    account == null -> "Tippe auf einem Kanal auf „Folgen“ – oder melde dich bei Twitch an, dann kommen deine gefolgten Kanäle von selbst."
+                    account?.expired == true -> "Deine Twitch-Anmeldung ist abgelaufen – melde dich neu an, dann kommen deine gefolgten Kanäle von selbst."
+                    sync.count == 0 -> "Dein Twitch-Konto folgt laut Twitch noch keinem Kanal. Tippe auf einem Kanal auf „Folgen“."
+                    else -> "Tippe auf einem Kanal auf „Folgen“."
+                },
             ) {
-                if (account == null) PrimaryPill("Bei Twitch anmelden", onClick = { nav.openTwitchLogin() })
+                if (account == null || account?.expired == true) PrimaryPill("Bei Twitch anmelden", onClick = { nav.openTwitchLogin() })
+                else PrimaryPill("Von Twitch neu laden", onClick = { TwitchFollows.syncFromAccount() })
             }
             shown.isEmpty() && vm.loading -> LoadingBox(Modifier.padding(top = 80.dp))
             shown.isEmpty() && vm.error != null -> ErrorBox(vm.error.orEmpty(), onRetry = { vm.load() })
-            else -> PullToRefreshBox(isRefreshing = vm.loading, onRefresh = { vm.load() }, modifier = Modifier.fillMaxSize()) {
+            else -> PullToRefreshBox(
+                isRefreshing = vm.loading,
+                onRefresh = {
+                    TwitchFollows.syncFromAccount()
+                    vm.load()
+                },
+                modifier = Modifier.fillMaxSize(),
+            ) {
                 LazyColumn(contentPadding = PaddingValues(bottom = 80.dp), modifier = Modifier.fillMaxSize()) {
                     val live = shown.mapNotNull { it.live }
                     if (live.isNotEmpty()) {

@@ -50,8 +50,11 @@ object TwitchAccount {
         }
         TwitchApi.auth = { _state.value?.takeIf { !it.expired }?.let { it.tokens.accessToken to it.tokens.clientId } }
         TwitchApi.onUnauthorized = { markExpired() }
-        // Twitch verlangt, das Token beim Start zu prüfen
-        scope.launch { check() }
+        // Twitch verlangt, das Token beim Start zu prüfen; danach die gefolgten Kanäle abgleichen
+        scope.launch {
+            check()
+            TwitchFollows.syncFromAccount()
+        }
     }
 
     private fun save(data: TwitchAccountData?) {
