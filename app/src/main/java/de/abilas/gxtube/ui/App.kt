@@ -145,7 +145,7 @@ fun AppRoot(inPip: Boolean) {
                 when {
                     target.startsWith("channel:") -> nav.openChannel(target.removePrefix("channel:"))
                     target.startsWith("playlist:") -> nav.openPlaylist(target.removePrefix("playlist:"))
-                    target.startsWith("search:") -> nav.openSearch(target.removePrefix("search:"))
+                    target.startsWith("search:") -> nav.openSearch(target.removePrefix("search:"), youtube = true)
                     target.startsWith("twitch-channel:") -> nav.openTwitchChannel(target.removePrefix("twitch-channel:"))
                     target.startsWith("route:") -> when (val r = target.removePrefix("route:")) {
                         Routes.SHORTS -> if (Library.settings.shortsEnabled) nav.openTab(r)

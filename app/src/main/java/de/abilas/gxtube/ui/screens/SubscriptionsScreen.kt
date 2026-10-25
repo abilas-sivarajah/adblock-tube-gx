@@ -101,7 +101,7 @@ fun SubscriptionsScreen() {
                             "oder übernimm deine YouTube-Abos aus Google Takeout (unter \"Du\").",
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            PrimaryPill("Kanäle suchen", onClick = { nav.openSearch() })
+                            PrimaryPill("Kanäle suchen", onClick = { nav.openSearch(youtube = true) })
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 "Abos importieren",

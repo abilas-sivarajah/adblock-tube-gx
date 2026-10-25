@@ -119,7 +119,7 @@ fun ChannelScreen(url: String) {
 
     Column(Modifier.fillMaxSize()) {
         BackTopBar(page?.ref?.name ?: "") {
-            IconButton(onClick = { nav.openSearch(page?.ref?.name.orEmpty()) }) {
+            IconButton(onClick = { nav.openSearch(page?.ref?.name.orEmpty(), youtube = true) }) {
                 Icon(Icons.Outlined.Search, "Suchen", tint = Yt.colors.text)
             }
             IconButton(onClick = { shareText(context, page?.ref?.url ?: url) }) {

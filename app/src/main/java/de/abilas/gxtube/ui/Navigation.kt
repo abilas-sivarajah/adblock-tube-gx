@@ -70,9 +70,9 @@ class AppNav(private val nav: NavHostController) {
         nav.navigate("playlist?url=" + Uri.encode(url))
     }
 
-    /** Suche – auf YouTube oder Twitch, je nach Umschalter oben. */
-    fun openSearch(query: String = "") {
-        val twitch = Library.settings.platform == "twitch"
+    /** Suche – auf YouTube oder Twitch, je nach Umschalter oben ([youtube]: immer YouTube, z. B. für YouTube-Links). */
+    fun openSearch(query: String = "", youtube: Boolean = false) {
+        val twitch = !youtube && Library.settings.platform == "twitch"
         nav.navigate((if (twitch) "twitch/search?q=" else "search?q=") + Uri.encode(query))
     }
 
