@@ -56,6 +56,8 @@ object Cast {
     private const val TAG = "Cast"
     private const val WELCOME_TIMEOUT_MS = 6_000L
     private val RECONNECT_DELAYS = listOf(1_000L, 2_000L, 4_000L, 8_000L, 15_000L)
+    /** Nach einem Neustart vom Handy: bis zu 5 Minuten auf den PC warten. */
+    private val RESTART_DELAYS = listOf(20_000L) + List(28) { 10_000L }
 
     private lateinit var app: Application
     private lateinit var prefsFile: File
@@ -108,6 +110,8 @@ object Cast {
     private var welcomeJob: Job? = null
     private var reconnectJob: Job? = null
     private var hintJob: Job? = null
+    /** Der PC hat angekündigt, neu zu starten (true) oder herunterzufahren (false) – mit Zeitpunkt. */
+    private var powerAt: Pair<Boolean, Long>? = null
 
     /**
      * Nach "Abspielen"/"Stopp" erwartetes Video (null = nichts). Bis der PC es meldet, werden
@@ -302,6 +306,16 @@ object Cast {
             }
             is CastProtocol.Incoming.Queue -> _queue.value = msg.queue
             is CastProtocol.Incoming.Error -> Log.w(TAG, "PC meldet: ${msg.message}")
+            is CastProtocol.Incoming.Notice -> {
+                // z. B. "lässt sich nicht herunterfahren" – dann läuft der PC weiter
+                powerAt = null
+                _messages.tryEmit(msg.message)
+            }
+            is CastProtocol.Incoming.Power -> {
+                powerAt = msg.restart to SystemClock.elapsedRealtime()
+                val name = device?.name ?: "Der PC"
+                _messages.tryEmit(if (msg.restart) "$name wird neu gestartet" else "$name wird heruntergefahren")
+            }
             is CastProtocol.Incoming.Welcome, CastProtocol.Incoming.Pong -> Unit
         }
     }
@@ -325,6 +339,18 @@ object Cast {
     /** Bestehende Verbindung abgebrochen (WLAN weg, PC beendet …): ein paar Mal neu versuchen. */
     private fun dropped(device: CastDevice, retry: Boolean) {
         socket = null
+        // Vom Handy aus ausgeschaltet: nicht als Fehler melden; nach einem Neustart länger auf den PC warten
+        val power = powerAt?.takeIf { SystemClock.elapsedRealtime() - it.second < 2 * 60_000 }?.first
+        powerAt = null
+        if (power == false) {
+            reset()
+            savePrefs(prefs.copy(autoReconnect = false))
+            return
+        }
+        if (power == true) {
+            reconnectJob?.cancel()
+            reconnectJob = null
+        }
         if (!retry) {
             reset()
             savePrefs(prefs.copy(autoReconnect = false))
@@ -334,19 +360,23 @@ object Cast {
         if (reconnectJob?.isActive == true) return
         _connection.value = CastConnection.Connecting(device)
         reconnectJob = scope.launch {
-            for (wait in RECONNECT_DELAYS) {
+            for (wait in if (power == true) RESTART_DELAYS else RECONNECT_DELAYS) {
                 delay(wait)
                 val ok = CompletableDeferred<Boolean>()
                 open(device) { success, _ -> ok.complete(success) }
                 if (ok.await()) {
                     reconnectJob = null
+                    if (power == true) _messages.tryEmit("Wieder mit ${device.name} verbunden")
                     return@launch
                 }
                 _connection.value = CastConnection.Connecting(device)
             }
             reconnectJob = null
             reset()
-            _messages.tryEmit("Verbindung zu ${device.name} verloren")
+            _messages.tryEmit(
+                if (power == true) "${device.name} ist nach dem Neustart nicht erreichbar – startet GX Tube mit dem PC?"
+                else "Verbindung zu ${device.name} verloren",
+            )
         }
     }
 
@@ -466,6 +496,17 @@ object Cast {
     fun setFullscreen(on: Boolean? = null) {
         val next = on ?: !(_state.value?.fullscreen ?: false)
         if (send(CastProtocol.fullscreen(next))) optimistic { it.copy(fullscreen = next) }
+    }
+
+    /** Twitch-Chat am PC ein/aus (null = umschalten). */
+    fun setTwitchChat(on: Boolean? = null) {
+        val next = on ?: !(_state.value?.twitchChat ?: false)
+        if (send(CastProtocol.twitchChat(next))) optimistic { it.copy(twitchChat = next) }
+    }
+
+    /** PC erzwungen neu starten oder herunterfahren (der PC kündigt es mit "power" an). */
+    fun powerPc(restart: Boolean) {
+        if (!send(CastProtocol.power(restart))) _messages.tryEmit("Nicht mit dem PC verbunden")
     }
 
     /** GX Tube am PC auf einen anderen Bildschirm schieben. */

@@ -36,7 +36,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.SpeakerNotesOff
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import de.abilas.gxtube.cast.Cast
 import de.abilas.gxtube.player.NowPlaying
 import de.abilas.gxtube.player.PlayerController
 import de.abilas.gxtube.twitch.ChatMessage
@@ -89,6 +92,7 @@ import de.abilas.gxtube.ui.components.PillButton
 import de.abilas.gxtube.ui.components.VideoRow
 import de.abilas.gxtube.ui.shareText
 import de.abilas.gxtube.ui.theme.Yt
+import de.abilas.gxtube.ui.theme.YtColors
 import de.abilas.gxtube.util.Fmt
 import kotlinx.coroutines.delay
 
@@ -100,6 +104,7 @@ fun TwitchWatchDetails(n: NowPlaying) {
     val v = n.video
     val login = v.twitchLogin ?: n.twitch?.login
     val lib by Library.data.collectAsStateWithLifecycle()
+    val castState by Cast.state.collectAsStateWithLifecycle()
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     // Uhr für "seit 2:13 Std."
@@ -148,6 +153,16 @@ fun TwitchWatchDetails(n: NowPlaying) {
             if (login != null) FollowButton(login, n.twitch?.userId, v.channelName, v.channelAvatar)
             Spacer(Modifier.width(6.dp))
             IconButton(onClick = { shareText(context, v.shareUrl) }) { Icon(Icons.Outlined.Share, "Teilen", tint = Yt.colors.text) }
+            // Läuft der Stream am PC: Chat dort ein-/ausblenden
+            castState?.twitchChat?.let { pcChat ->
+                IconButton(onClick = { Cast.setTwitchChat(!pcChat) }) {
+                    Icon(
+                        if (pcChat) Icons.AutoMirrored.Outlined.Chat else Icons.Outlined.SpeakerNotesOff,
+                        if (pcChat) "Chat am PC ausblenden" else "Chat am PC einblenden",
+                        tint = if (pcChat) YtColors.Cyan else Yt.colors.text,
+                    )
+                }
+            }
         }
         HorizontalDivider(color = Yt.colors.divider)
         when {

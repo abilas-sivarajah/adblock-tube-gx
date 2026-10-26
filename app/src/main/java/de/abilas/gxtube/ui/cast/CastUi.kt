@@ -28,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.CastConnected
 import androidx.compose.material.icons.filled.Check
@@ -37,8 +38,12 @@ import androidx.compose.material.icons.outlined.DesktopWindows
 import androidx.compose.material.icons.outlined.Computer
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.PowerSettingsNew
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.RestartAlt
+import androidx.compose.material.icons.outlined.SpeakerNotesOff
 import androidx.compose.material.icons.outlined.Wifi
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -140,6 +145,8 @@ fun CastSheet(onDismiss: () -> Unit) {
 private fun ConnectedPanel(device: CastDevice, onDismiss: () -> Unit) {
     val state by Cast.state.collectAsStateWithLifecycle()
     val c = Yt.colors
+    // Rückfrage vor dem Ausschalten: true = neu starten, false = herunterfahren
+    var confirmPower by remember { mutableStateOf<Boolean?>(null) }
     Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Filled.CastConnected, null, tint = YtColors.Cyan, modifier = Modifier.size(28.dp))
         Spacer(Modifier.width(14.dp))
@@ -207,6 +214,15 @@ private fun ConnectedPanel(device: CastDevice, onDismiss: () -> Unit) {
         Spacer(Modifier.height(8.dp))
     }
 
+    // Twitch-Chat neben dem Live-Stream am PC (nur während ein Twitch-Live-Stream läuft)
+    state?.twitchChat?.let { chatOn ->
+        SheetAction(
+            if (chatOn) Icons.Outlined.SpeakerNotesOff else Icons.AutoMirrored.Outlined.Chat,
+            if (chatOn) "Chat am PC ausblenden" else "Chat am PC einblenden",
+            if (chatOn) null else "Der Twitch-Chat rechts neben dem Stream",
+        ) { Cast.setTwitchChat(!chatOn) }
+    }
+
     if (state?.video != null) {
         SheetAction(Icons.Outlined.PhoneAndroid, "Auf dem Handy weiterschauen", "Am PC anhalten und hier an derselben Stelle fortsetzen") {
             PlayerController.disconnectCast(continueHere = true)
@@ -217,6 +233,58 @@ private fun ConnectedPanel(device: CastDevice, onDismiss: () -> Unit) {
         PlayerController.disconnectCast(continueHere = false)
         onDismiss()
     }
+
+    // PC ausschalten (ältere Desktop-Versionen melden "power" nicht)
+    state?.power?.let { allowed ->
+        Text(
+            "PC",
+            color = c.textSecondary,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 2.dp),
+        )
+        val detail = if (allowed) "Sofort – offene Programme werden geschlossen" else "Am PC abgeschaltet (GX Tube → Einstellungen)"
+        SheetAction(Icons.Outlined.RestartAlt, "PC neu starten", detail, enabled = allowed) { confirmPower = true }
+        SheetAction(Icons.Outlined.PowerSettingsNew, "PC herunterfahren", detail, enabled = allowed) { confirmPower = false }
+    }
+    confirmPower?.let { restart ->
+        PowerDialog(
+            pcName = device.name,
+            restart = restart,
+            autostart = state?.autostart,
+            onConfirm = {
+                confirmPower = null
+                Cast.powerPc(restart)
+                onDismiss()
+            },
+            onDismiss = { confirmPower = null },
+        )
+    }
+}
+
+@Composable
+private fun PowerDialog(pcName: String, restart: Boolean, autostart: Boolean?, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (restart) "$pcName neu starten?" else "$pcName herunterfahren?") },
+        text = {
+            Column {
+                Text("Das passiert sofort: Alle offenen Programme am PC werden ohne Nachfrage geschlossen – nicht gespeicherte Arbeit geht verloren.")
+                if (restart && autostart == false) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "GX Tube startet danach nicht von selbst. Damit das Handy den PC wiederfindet, am PC in GX Tube unter " +
+                            "Einstellungen „Mit dem Computer starten“ einschalten.",
+                        fontSize = 14.sp,
+                        color = Yt.colors.textSecondary,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(if (restart) "Neu starten" else "Herunterfahren", color = YtColors.Red) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
+    )
 }
 
 @Composable
@@ -349,12 +417,19 @@ private fun DisplayRow(display: RemoteDisplay, number: Int, selected: Boolean, o
 }
 
 @Composable
-private fun SheetAction(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, detail: String?, onClick: () -> Unit) {
+private fun SheetAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    detail: String?,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
     val c = Yt.colors
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
+            .alpha(if (enabled) 1f else 0.5f)
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

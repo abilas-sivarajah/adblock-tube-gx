@@ -66,6 +66,12 @@ object CastProtocol {
     /** Fenster am PC auf diesen Bildschirm verschieben (IDs aus [RemoteState.displays]). */
     fun display(id: Long) = msg("display") { put("id", id) }
 
+    /** Twitch-Chat neben dem Live-Stream am PC ein/aus; null = umschalten. */
+    fun twitchChat(on: Boolean?) = msg("twitchChat") { if (on != null) put("on", on) }
+
+    /** PC erzwungen neu starten bzw. herunterfahren. */
+    fun power(restart: Boolean) = msg("power") { put("action", if (restart) "restart" else "shutdown") }
+
     private fun videoJson(v: VideoItem) = buildJsonObject {
         put("id", v.id)
         put("title", v.title)
@@ -90,6 +96,10 @@ object CastProtocol {
         data class State(val state: RemoteState) : Incoming
         data class Queue(val queue: RemoteQueue) : Incoming
         data class Error(val message: String) : Incoming
+        /** Hinweis vom PC zum Anzeigen (z. B. Ausschalten am PC abgeschaltet). */
+        data class Notice(val message: String) : Incoming
+        /** Der PC startet gleich neu ([restart]) oder fährt herunter – die Verbindung bricht dann ab. */
+        data class Power(val restart: Boolean) : Incoming
         data object Pong : Incoming
     }
 
@@ -100,6 +110,8 @@ object CastProtocol {
             "state" -> Incoming.State(json.decodeFromJsonElement<RemoteState>(obj))
             "queue" -> Incoming.Queue(json.decodeFromJsonElement<RemoteQueue>(obj))
             "error" -> Incoming.Error(obj["message"]?.jsonPrimitive?.contentOrNull ?: "Fehler")
+            "notice" -> obj["message"]?.jsonPrimitive?.contentOrNull?.let { Incoming.Notice(it) }
+            "power" -> Incoming.Power(restart = obj["action"]?.jsonPrimitive?.contentOrNull == "restart")
             "pong" -> Incoming.Pong
             else -> null
         }
@@ -199,6 +211,12 @@ data class RemoteState(
     /** Bildschirm, auf dem GX Tube am PC gerade läuft. */
     val displayId: Long? = null,
     val displays: List<RemoteDisplay> = emptyList(),
+    /** Twitch-Chat neben dem Live-Stream am PC zu sehen (null: kein Twitch-Live-Stream oder ältere Version). */
+    val twitchChat: Boolean? = null,
+    /** Darf das Handy den PC ausschalten? null: ältere Desktop-Version ohne diese Steuerung. */
+    val power: Boolean? = null,
+    /** Startet GX Tube mit dem PC (nach einem Neustart wieder erreichbar)? */
+    val autostart: Boolean? = null,
 ) {
     val isPlaying: Boolean get() = status == "playing"
     val isLoading: Boolean get() = status == "loading" || status == "buffering"

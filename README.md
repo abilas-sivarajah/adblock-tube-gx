@@ -75,6 +75,11 @@ und schickt Abonnieren / „Mag ich“ / „Später ansehen“ zusätzlich an de
 Im Video-Menü (⋮) gibt es beim Streamen **„Als Nächstes abspielen“** und **„Zur Warteschlange hinzufügen“**.
 Über das Streamen-Symbol: Lautstärke am PC, **„Auf dem Handy weiterschauen“** (hält am PC an und macht hier weiter)
 oder **„Verbindung trennen“** (das Video läuft am PC weiter). Shorts laufen immer auf dem Handy.
+Dort lässt sich auch der **Twitch-Chat am PC** ein-/ausblenden (er startet ausgeblendet; bei Twitch-Streams auch
+über den Chat-Knopf unter dem Stream) und der **PC neu starten oder herunterfahren** – nach einer Rückfrage, sofort
+und erzwungen (offene Programme werden ohne Nachfrage geschlossen). Nach einem Neustart verbindet sich die App
+von selbst wieder, sobald GX Tube Desktop läuft (dafür dort „Mit dem Computer starten“ einschalten). Am PC lässt
+sich das Ausschalten vom Handy in den Einstellungen abschalten.
 Wurde die App beim Streamen geschlossen, verbindet sie sich beim nächsten Öffnen von selbst wieder (innerhalb von 12 Stunden).
 
 Technisch: Suche per UDP-Broadcast (Port 8766), Steuerung per WebSocket (Port 8765), nur im lokalen Netz –

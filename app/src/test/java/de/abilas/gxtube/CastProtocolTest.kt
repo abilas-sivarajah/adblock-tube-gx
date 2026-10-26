@@ -64,6 +64,11 @@ class CastProtocolTest {
         assertNull(obj(CastProtocol.fullscreen(null))["on"])
         assertEquals("true", obj(CastProtocol.fullscreen(true))["on"]!!.jsonPrimitive.content)
         assertEquals(2528732444L, obj(CastProtocol.display(2528732444L))["id"]!!.jsonPrimitive.long)
+
+        assertNull(obj(CastProtocol.twitchChat(null))["on"])
+        assertEquals("false", obj(CastProtocol.twitchChat(false))["on"]!!.jsonPrimitive.content)
+        assertEquals("restart", obj(CastProtocol.power(restart = true))["action"]!!.jsonPrimitive.content)
+        assertEquals("shutdown", obj(CastProtocol.power(restart = false))["action"]!!.jsonPrimitive.content)
     }
 
     @Test
@@ -91,6 +96,16 @@ class CastProtocolTest {
         assertEquals(2528732444L, withWindow.state.displayId)
         assertEquals(2, withWindow.state.displays.size)
         assertEquals("DELL U2415", withWindow.state.displays[0].name)
+        assertNull("ältere Desktop-Version: keine Knöpfe zum Ausschalten", withWindow.state.power)
+        assertNull(withWindow.state.twitchChat)
+
+        val pc = CastProtocol.parse("""{"type":"state","status":"playing","twitchChat":false,"power":true,"autostart":false}""") as CastProtocol.Incoming.State
+        assertEquals(false, pc.state.twitchChat)
+        assertEquals(true, pc.state.power)
+        assertEquals(false, pc.state.autostart)
+        assertEquals(CastProtocol.Incoming.Power(restart = true), CastProtocol.parse("""{"type":"power","action":"restart"}"""))
+        assertEquals(CastProtocol.Incoming.Power(restart = false), CastProtocol.parse("""{"type":"power","action":"shutdown"}"""))
+        assertEquals(CastProtocol.Incoming.Notice("Am PC abgeschaltet"), CastProtocol.parse("""{"type":"notice","message":"Am PC abgeschaltet"}"""))
 
         val idle = CastProtocol.parse("""{"type":"state","video":null,"status":"idle"}""") as CastProtocol.Incoming.State
         assertNull(idle.state.video)
@@ -195,6 +210,10 @@ class CastProtocolTest {
         ws.send(CastProtocol.fullscreen(null))
         waitFor("Vollbild aus (umgeschaltet)") { m -> (m as? CastProtocol.Incoming.State)?.state?.takeIf { it.fullscreen == false } }
 
+        // Ausschalten nicht im Test (sonst fährt der PC herunter) – nur ob der PC es anbietet (ab 0.1.22)
+        val power = waitFor("Ausschalten-Angabe") { m -> (m as? CastProtocol.Incoming.State)?.state?.takeIf { it.power != null } }
+        println("[PC] ausschalten erlaubt: ${power.power}, startet mit dem PC: ${power.autostart}")
+
         // Twitch (GX Tube Desktop ab 0.1.18): braucht Internet
         if (System.getenv("GXTUBE_ONLINE_TESTS") == "1") {
             val live = de.abilas.gxtube.twitch.TwitchApi.home("de").streams.first()
@@ -203,6 +222,12 @@ class CastProtocolTest {
             println("[Twitch] ${tw.status} ${tw.video?.title} (${tw.video?.channelLogin}), live: ${tw.isLive}")
             assertTrue(tw.isLive)
             assertEquals(live.twitchLogin, tw.video?.toVideoItem()?.twitchLogin)
+            // Chat am PC (ab 0.1.22): startet ausgeblendet, vom Handy einblenden
+            waitFor("Chat-Angabe") { m -> (m as? CastProtocol.Incoming.State)?.state?.takeIf { it.twitchChat != null } }
+            ws.send(CastProtocol.twitchChat(true))
+            waitFor("Chat am PC an") { m -> (m as? CastProtocol.Incoming.State)?.state?.takeIf { it.twitchChat == true } }
+            ws.send(CastProtocol.twitchChat(null))
+            waitFor("Chat am PC aus (umgeschaltet)") { m -> (m as? CastProtocol.Incoming.State)?.state?.takeIf { it.twitchChat == false } }
         }
 
         ws.send(CastProtocol.simple("stop"))
