@@ -1,0 +1,490 @@
+10-26 13:04:46.301   522  1965 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=0
+10-26 13:04:46.326   835   869 V WindowManagerShell: Transition requested: android.os.BinderProxy@11fc323 TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=8 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity } baseActivity=ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity} topActivity=ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity} origActivity=null realActivity=ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity} numActivities=1 lastActiveTime=56712 supportsMultiWindow=true resizeMode=2 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@80cf020} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 128 - 0, 0) topActivityInfo=ActivityInfo{76c2dd9 de.abilas.gxtube.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden}, remoteTransition = null, displayChange = null }
+10-26 13:04:46.722  4229  4229 I e.abilas.gxtube: Using CollectorTypeCC GC.
+10-26 13:04:46.723  4229  4229 W e.abilas.gxtube: Unexpected CPU variant for x86: x86_64.
+10-26 13:04:46.723  4229  4229 W e.abilas.gxtube: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, tremont, kabylake, default
+10-26 13:04:46.724  4229  4229 E e.abilas.gxtube: Not starting debugger since process cannot load the jdwp agent.
+10-26 13:04:46.762   522   552 I ActivityManager: Start proc 4229:de.abilas.gxtube/u0a192 for next-top-activity {de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:04:46.838   522   541 V WindowManager: Sent Transition #8 createdAt=10-26 13:04:46.281 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=8 displayId=0 isRunning=true baseIntent=Intent { flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity } baseActivity=ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity} topActivity=ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity} origActivity=null realActivity=ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity} numActivities=1 lastActiveTime=56712 supportsMultiWindow=true resizeMode=2 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{2628062 Task{22319d2 #8 type=standard A=10192:de.abilas.gxtube}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 128 - 0, 0) topActivityInfo=ActivityInfo{4dab5f3 de.abilas.gxtube.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isSleeping=false topActivityInSizeCompat=false topActivityEligibleForLetterboxEducation= false topActivityLetterboxed= false isFromDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 locusId=null displayAreaFeatureId=1 cameraCompatControlState=hidden}, remoteTransition = null, displayChange = null }
+10-26 13:04:46.838   522   541 V WindowManager:     info={id=8 t=OPEN f=0x0 trk=0 r=[0@Point(0, 0)] c=[{WCT{RemoteToken{2628062 Task{22319d2 #8 type=standard A=10192:de.abilas.gxtube}}} m=OPEN f=NONE leash=Surface(name=Task=8)/@0xc52dbfe sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0},{WCT{RemoteToken{181b2b0 Task{6370e46 #1 type=home}}} m=TO_BACK f=SHOW_WALLPAPER leash=Surface(name=Task=1)/@0x1a033a4 sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) d=0}]}
+10-26 13:04:46.884  1052  1052 D CarrierSvcBindHelper: onPackageAdded: de.abilas.gxtube
+10-26 13:04:47.098  4229  4229 D nativeloader: Configuring clns-6 for other apk /data/app/~~XMEIE-Jw-1XXshu1kNCuiA==/de.abilas.gxtube-5E8kDVAcgnXCZaaIqrIl-Q==/base.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~XMEIE-Jw-1XXshu1kNCuiA==/de.abilas.gxtube-5E8kDVAcgnXCZaaIqrIl-Q==/lib/x86_64:/data/app/~~XMEIE-Jw-1XXshu1kNCuiA==/de.abilas.gxtube-5E8kDVAcgnXCZaaIqrIl-Q==/base.apk!/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/de.abilas.gxtube
+10-26 13:04:47.133  4229  4229 V GraphicsEnvironment: ANGLE GameManagerService for de.abilas.gxtube: false
+10-26 13:04:47.133  4229  4229 V GraphicsEnvironment: de.abilas.gxtube is not listed in per-application setting
+10-26 13:04:47.241  1052  1339 D ImsResolver: maybeAddedImsService, packageName: de.abilas.gxtube
+10-26 13:04:47.373  4229  4229 I ExoPlayerImpl: Init bc39003 [AndroidXMedia3/1.8.0] [emu64xa, sdk_gphone64_x86_64, Google, 34]
+10-26 13:04:47.494   522   806 I SdkSandboxManager: No SDKs used. Skipping SDK data reconcilation for CallingInfo{mUid=10192, mPackageName='de.abilas.gxtube, mAppProcessToken='null'}
+10-26 13:04:47.565   522  2198 D CoreBackPreview: Window{51891e5 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@a6695c1, mPriority=-1, mIsAnimationCallback=false}
+10-26 13:04:47.590   837   837 I SafetyLabelChangedBroadcastReceiver: received broadcast packageName: de.abilas.gxtube, current user: UserHandle{0}, packageChangeEvent: NEW_INSTALL, intent user: UserHandle{0}
+10-26 13:04:48.039  1052  1052 D CarrierSvcBindHelper: onPackageModified: de.abilas.gxtube
+10-26 13:04:48.051  1052  1339 D ImsResolver: maybeAddedImsService, packageName: de.abilas.gxtube
+10-26 13:04:48.896   522  1637 I WindowManager: finishDrawing of relaunch: Window{51891e5 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity} 1223ms
+10-26 13:04:48.971   522   536 W InputManager-JNI: Input channel object 'a8197cc Splash Screen de.abilas.gxtube (client)' was disposed without first being removed with the input manager!
+10-26 13:04:49.048   522   541 I ActivityTaskManager: Displayed de.abilas.gxtube/.MainActivity for user 0: +2s662ms
+10-26 13:04:49.182   522  1637 W InputManager-JNI: Input channel object '51891e5 de.abilas.gxtube/de.abilas.gxtube.MainActivity (client)' was disposed without first being removed with the input manager!
+10-26 13:04:49.249   522  1825 I WindowManager: setOnBackInvokedCallback(): No window state for package:de.abilas.gxtube
+10-26 13:04:49.330   522  2756 D CoreBackPreview: Window{f2129f3 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@d55e4d4, mPriority=-1, mIsAnimationCallback=false}
+10-26 13:04:49.792   522  2756 I ImeTracker: de.abilas.gxtube:31251503: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-26 13:04:49.792   522  2756 I ImeTracker: de.abilas.gxtube:31251503: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-26 13:04:49.842  1513  1513 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, false)
+10-26 13:04:52.937  1624  1624 I AiAiEcho: AppFetcherImplV2 updateApps package:[de.abilas.gxtube], userId:[0], reason:[package is added.].
+10-26 13:04:53.292  4229  4708 D ProfileInstaller: Installing profile for de.abilas.gxtube
+10-26 13:04:53.344  1411  4522 I FontLog : Package de.abilas.gxtube has no metadata [CONTEXT service_id=132 ]
+10-26 13:04:53.382  1487  3518 I BlockstoreStorage: Clearing Blockstore Data for package de.abilas.gxtube [CONTEXT service_id=258 ]
+10-26 13:04:53.880  1624  1624 I AiAiEcho: AppFetcherImpl onPackageChanged de.abilas.gxtube.
+10-26 13:04:53.881  1624  2866 I AiAiEcho: AppIndexer Package:[de.abilas.gxtube] UserProfile:[0] Enabled:[true].
+10-26 13:04:53.881  1624  2866 I AiAiEcho: AppFetcherImplV2 updateApps package:[de.abilas.gxtube], userId:[0], reason:[package is updated.].
+10-26 13:05:15.772  4229  4235 W e.abilas.gxtube: Cleared Reference was only reachable from finalizer (only reported once)
+10-26 13:05:15.783  4229  4235 I e.abilas.gxtube: Background concurrent copying GC freed 649222(21MB) AllocSpace objects, 52(5696KB) LOS objects, 49% free, 7469KB/14MB, paused 44us,15us total 101.414ms
+10-26 13:05:28.093   522  2564 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:05:28.094   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:05:28.132   522   599 D CoreBackPreview: Window{f2129f3 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@e073c8f, mPriority=0, mIsAnimationCallback=true}
+10-26 13:05:29.127  4229  4229 E PlayerController: Video konnte nicht geladen werden
+10-26 13:05:29.127  4229  4229 E PlayerController: org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException: YouTube probably temporarily blocked anonymous watch access with this IP , got error LOGIN_REQUIRED: "Sign in to confirm that you're not a bot"
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.checkPlayabilityStatus(YoutubeStreamExtractor.java:854)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.fetchVisionOsClient(YoutubeStreamExtractor.java:897)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.onFetchPage(YoutubeStreamExtractor.java:813)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at org.schabi.newpipe.extractor.Extractor.fetchPage(Extractor.java:65)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:95)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:89)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo.stream$lambda$0(YouTubeRepo.kt:113)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo.$r8$lambda$u-1la3a1ubSXlP4-BUJ6bun-I8Y(Unknown Source:0)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo$$ExternalSyntheticLambda8.invoke(D8$$SyntheticClass:0)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo$io$2.invokeSuspend(YouTubeRepo.kt:89)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:820)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+10-26 13:05:29.127  4229  4229 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+10-26 13:05:55.206   522  2564 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:05:55.208   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:06:02.482   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:06:02.482   522   599 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:06:08.767   522  1965 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=https://www.youtube.com/... flg=0x10000000 pkg=de.abilas.gxtube cmp=de.abilas.gxtube/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:06:08.768   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:06:26.263   522   751 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=https://www.youtube.com/... flg=0x10000000 pkg=de.abilas.gxtube cmp=de.abilas.gxtube/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:06:26.272   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:06:26.449  4229  4235 I e.abilas.gxtube: Background concurrent copying GC freed 96140(4985KB) AllocSpace objects, 27(1672KB) LOS objects, 49% free, 8255KB/16MB, paused 18us,16us total 145.704ms
+10-26 13:06:26.487  4229  4229 E PlayerController: Video konnte nicht geladen werden
+10-26 13:06:26.487  4229  4229 E PlayerController: org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException: YouTube probably temporarily blocked anonymous watch access with this IP , got error LOGIN_REQUIRED: "Sign in to confirm that you're not a bot"
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.checkPlayabilityStatus(YoutubeStreamExtractor.java:854)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.fetchVisionOsClient(YoutubeStreamExtractor.java:897)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.onFetchPage(YoutubeStreamExtractor.java:813)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at org.schabi.newpipe.extractor.Extractor.fetchPage(Extractor.java:65)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:95)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:89)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo.stream$lambda$0(YouTubeRepo.kt:113)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo.$r8$lambda$u-1la3a1ubSXlP4-BUJ6bun-I8Y(Unknown Source:0)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo$$ExternalSyntheticLambda8.invoke(D8$$SyntheticClass:0)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at de.abilas.gxtube.data.YouTubeRepo$io$2.invokeSuspend(YouTubeRepo.kt:89)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:820)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+10-26 13:06:26.487  4229  4229 E PlayerController: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+10-26 13:06:55.882   522  2309 D CoreBackPreview: Window{140c595 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@850ed77, mPriority=-1, mIsAnimationCallback=false}
+10-26 13:06:55.882   522   751 D CoreBackPreview: Window{140c595 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@3d98de4, mPriority=0, mIsAnimationCallback=true}
+10-26 13:06:55.888   522   751 D CoreBackPreview: Window{140c595 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@f35124d, mPriority=0, mIsAnimationCallback=true}
+10-26 13:06:56.483   522   751 I ImeTracker: de.abilas.gxtube:5c97d565: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-26 13:06:56.484   522   751 I ImeTracker: de.abilas.gxtube:5c97d565: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-26 13:06:56.582  1513  1513 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, false)
+10-26 13:07:00.154   522  2317 D CoreBackPreview: Window{140c595 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback null
+10-26 13:07:00.161   522  2317 W InputManager-JNI: Input channel object '140c595 de.abilas.gxtube/de.abilas.gxtube.MainActivity (client)' was disposed without first being removed with the input manager!
+10-26 13:07:00.203   522  2317 I ImeTracker: de.abilas.gxtube:80e4e2a9: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-26 13:07:00.204   522  2317 I ImeTracker: de.abilas.gxtube:80e4e2a9: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-26 13:07:00.205  1513  1513 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, false)
+10-26 13:07:08.020   522   595 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=https://www.youtube.com/... flg=0x10000000 pkg=de.abilas.gxtube cmp=de.abilas.gxtube/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:07:08.021   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:07:24.449   522   595 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:07:24.453   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:07:24.580  4229  4235 I e.abilas.gxtube: Background young concurrent copying GC freed 70736(3418KB) AllocSpace objects, 3(1388KB) LOS objects, 29% free, 11MB/16MB, paused 5.164ms,14us total 52.108ms
+10-26 13:07:29.854  1513  1513 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, true)
+10-26 13:07:29.935  1513  1513 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, true)
+10-26 13:07:29.968   522   950 D nativeloader: Configuring clns-18 for other apk . target_sdk_version=36, uses_libraries=, library_path=/data/app/~~XMEIE-Jw-1XXshu1kNCuiA==/de.abilas.gxtube-5E8kDVAcgnXCZaaIqrIl-Q==/lib/x86_64:/data/app/~~XMEIE-Jw-1XXshu1kNCuiA==/de.abilas.gxtube-5E8kDVAcgnXCZaaIqrIl-Q==/base.apk!/lib/x86_64, permitted_path=/data:/mnt/expand
+10-26 13:07:29.979   522   950 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:07:29.986   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:07:30.162   522  2756 D CoreBackPreview: Window{f2129f3 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@aed44fd, mPriority=-1, mIsAnimationCallback=false}
+10-26 13:07:30.174  1513  1513 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, true)
+10-26 13:07:41.916   522  2756 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:07:41.918   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:07:41.940   522   595 D CoreBackPreview: Window{5baa828 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@e324372, mPriority=-1, mIsAnimationCallback=false}
+10-26 13:07:41.940   522   595 D CoreBackPreview: Window{5baa828 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@81fa3c3, mPriority=0, mIsAnimationCallback=true}
+10-26 13:07:41.940   522   595 D CoreBackPreview: Window{5baa828 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@5305440, mPriority=0, mIsAnimationCallback=true}
+10-26 13:07:42.058   522  2756 I ImeTracker: de.abilas.gxtube:f6c700b1: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-26 13:07:42.058   522  2756 I ImeTracker: de.abilas.gxtube:f6c700b1: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-26 13:07:42.097  1513  1513 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, false)
+10-26 13:07:50.544   522  2756 D CoreBackPreview: Window{5baa828 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback null
+10-26 13:07:50.553   522   595 W InputManager-JNI: Input channel object '5baa828 de.abilas.gxtube/de.abilas.gxtube.MainActivity (client)' was disposed without first being removed with the input manager!
+10-26 13:07:50.570   522  2183 I ImeTracker: de.abilas.gxtube:82d6c1d2: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-26 13:07:50.570   522  2183 I ImeTracker: de.abilas.gxtube:82d6c1d2: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-26 13:07:50.572  1513  1513 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, false)
+10-26 13:07:52.557   522  1824 D CoreBackPreview: Window{c736715 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@b7282f7, mPriority=-1, mIsAnimationCallback=false}
+10-26 13:07:52.557   522  1824 D CoreBackPreview: Window{c736715 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@5b33564, mPriority=0, mIsAnimationCallback=true}
+10-26 13:07:52.557   522  1824 D CoreBackPreview: Window{c736715 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@6ea63cd, mPriority=0, mIsAnimationCallback=true}
+10-26 13:07:52.836   522  1824 I ImeTracker: de.abilas.gxtube:172ecb77: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-26 13:07:52.836   522  1824 I ImeTracker: de.abilas.gxtube:172ecb77: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-26 13:07:52.851  1513  1513 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, false)
+10-26 13:07:59.219   522  2756 D CoreBackPreview: Window{c736715 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback null
+10-26 13:07:59.233   522  2175 W InputManager-JNI: Input channel object 'c736715 de.abilas.gxtube/de.abilas.gxtube.MainActivity (client)' was disposed without first being removed with the input manager!
+10-26 13:07:59.243  1513  1513 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, true)
+10-26 13:07:59.326  1513  1513 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, true)
+10-26 13:07:59.345   522  2183 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:07:59.365   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:07:59.459  1513  1513 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, true)
+10-26 13:07:59.640   522  2175 I ImeTracker: de.abilas.gxtube:3e386865: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-26 13:07:59.640   522  2175 I ImeTracker: de.abilas.gxtube:3e386865: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-26 13:07:59.643  1513  1513 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=de.abilas.gxtube fieldId=0 fieldName=null extras=null}, false)
+10-26 13:08:34.295   522  2175 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:08:34.296   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:08:34.435   522  2175 D CoreBackPreview: Window{f2129f3 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@8aa16e3, mPriority=0, mIsAnimationCallback=true}
+10-26 13:08:34.626   522  2175 I MediaFocusControl: requestAudioFocus() from uid/pid 10192/4229 AA=USAGE_MEDIA/CONTENT_TYPE_MOVIE clientId=android.media.AudioManager@4026253androidx.media3.exoplayer.AudioFocusManager$$ExternalSyntheticLambda0@e2b5790 callingPack=de.abilas.gxtube req=1 flags=0x0 sdk=36
+10-26 13:08:34.673   522  2175 I MediaSessionStack: addSession to bottom of stack | record: de.abilas.gxtube/androidx.media3.session.id. (userId=0)
+10-26 13:08:34.697   522  2175 I MediaSessionStack: onPlaybackStateChanged - Pushing session to top | record: de.abilas.gxtube/androidx.media3.session.id. (userId=0)
+10-26 13:08:34.700  1027  1027 D MediaPlayerList: onActiveSessionsChanged: controller: de.abilas.gxtube
+10-26 13:08:34.706  1027  1027 I MediaPlayerList: Adding wrapped media player: de.abilas.gxtube at key: 2
+10-26 13:08:34.706  1027  1027 D MediaPlayerList: onActiveSessionsChanged: controller: de.abilas.gxtube
+10-26 13:08:34.706  1027  1027 I MediaPlayerList: Adding wrapped media player: de.abilas.gxtube at key: 2
+10-26 13:08:34.737   522   895 I ActivityManager: Background started FGS: Allowed [callingPackage: de.abilas.gxtube; callingUid: 10192; uidState: TOP ; uidBFSL: [BFSL]; intent: Intent { act=androidx.media3.session.MediaSessionService cmp=de.abilas.gxtube/.player.PlaybackService }; code:PROC_STATE_TOP; tempAllowListReason:<null>; targetSdkVersion:36; callerTargetSdkVersion:36; startForegroundCount:0; bindFromPackage:null: isBindService:true]
+10-26 13:08:35.038   835   835 D MediaResumeListener: Checking for service component for de.abilas.gxtube
+10-26 13:08:35.527  4229  4272 I DMCodecAdapterFactory: Creating an asynchronous MediaCodec adapter for track type video
+10-26 13:08:35.560  4229  6561 I MediaCodec: MediaCodec will operate in async mode
+10-26 13:08:35.560  4229  6561 D MediaCodec: flushMediametrics
+10-26 13:08:35.560  4229  6561 I MediaCodec: [c2.goldfish.h264.decoder] setting surface generation to 4330497
+10-26 13:08:35.561  4229  4272 D MediaCodec: keep callback message for reclaim
+10-26 13:08:35.589  4229  4272 I DMCodecAdapterFactory: Creating an asynchronous MediaCodec adapter for track type audio
+10-26 13:08:35.614  4229  6570 I MediaCodec: MediaCodec will operate in async mode
+10-26 13:08:35.614  4229  6570 D MediaCodec: flushMediametrics
+10-26 13:08:35.615  4229  4272 D MediaCodec: keep callback message for reclaim
+10-26 13:08:36.039   522   522 D MediaSessionService: Media button session is changed to de.abilas.gxtube/androidx.media3.session.id. (userId=0)
+10-26 13:08:36.076  1027  1027 I MediaPlayerList: onMediaKeyEventSessionChanged: token=de.abilas.gxtube
+10-26 13:08:36.140  1027  1027 D MediaPlayerList: setActivePlayer(): setting player to de.abilas.gxtube
+10-26 13:08:36.140  1027  1027 D AudioMediaPlayerWrapper: de.abilas.gxtube Only Title and Artist info sync for metadata
+10-26 13:08:36.464  1027  1027 I MediaPlayerList: onMediaKeyEventSessionChanged: token=de.abilas.gxtube
+10-26 13:08:36.512  1027  1027 D MediaPlayerList: setActivePlayer(): setting player to de.abilas.gxtube
+10-26 13:08:36.515   522  1825 I MediaSessionService: tempAllowlistTargetPkgIfPossible callingPackage:com.google.android.bluetooth targetPackage:de.abilas.gxtube reason:MediaSessionRecord:android.support.v4.media.session.command.GET_EXTRA_BINDER [WIU] [FGS]
+10-26 13:08:36.518  1027  1027 D AudioMediaPlayerWrapper: de.abilas.gxtube Only Title and Artist info sync for metadata
+10-26 13:08:36.520  1027  1027 D MediaPlayerList: onActiveSessionsChanged: controller: de.abilas.gxtube
+10-26 13:08:36.521  1027  1027 D MediaPlayerList: onActiveSessionsChanged: controller: de.abilas.gxtube
+10-26 13:08:37.541  4229  4235 I e.abilas.gxtube: Background concurrent copying GC freed 48008(4340KB) AllocSpace objects, 26(796KB) LOS objects, 50% free, 16MB/33MB, paused 21us,121us total 114.982ms
+10-26 13:08:38.588  4229  4235 I e.abilas.gxtube: Background concurrent copying GC freed 10468(631KB) AllocSpace objects, 17(388KB) LOS objects, 39% free, 37MB/61MB, paused 20us,22us total 163.630ms
+10-26 13:08:38.695  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:38.696  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:39.241  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=289651, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:39.245  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:39.245  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=289651, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:39.245  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:40.686  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:40.686  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:42.296  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=292686, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:42.296  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:42.297  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=292686, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:42.297  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:42.691  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:42.691  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:43.162  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:08:43.163  1027  1027 D AudioMediaPlayerWrapper: de.abilas.gxtube Only Title and Artist info sync for metadata
+10-26 13:08:43.163  1027  1027 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for de.abilas.gxtube
+10-26 13:08:43.174  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:08:43.176  1027  1027 D AudioMediaPlayerWrapper: de.abilas.gxtube Only Title and Artist info sync for metadata
+10-26 13:08:43.176  1027  1027 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for de.abilas.gxtube
+10-26 13:08:44.729  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:44.729  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:45.303  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=295709, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:45.303  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:45.303  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=295709, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:45.303  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:46.696  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:46.697  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:48.332  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=298742, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:48.374  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:48.375  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=298742, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:48.375  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:48.683  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:48.819  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:49.268  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:08:49.269  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:49.269  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:08:49.274  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:50.957  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:50.960  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:51.388  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=301796, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:51.396  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:51.397  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=301796, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:51.397  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:53.169  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:53.175  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:54.417  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=304803, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:54.417  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:54.418  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=304803, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:54.418  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:55.304  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:08:55.305  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:55.305  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:08:55.305  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:55.437  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:55.439  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:57.405  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=307815, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:57.405  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:57.405  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=307815, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:08:57.405  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:57.939  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:57.944  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:59.894  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:08:59.904  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:00.440  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=310836, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:00.441  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:00.441  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=310836, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:00.441  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:01.229  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:01.229  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:01.229  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:01.229  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:01.900  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:01.952  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:03.491  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=313838, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:03.491  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:03.491  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=313838, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:03.491  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:03.891  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:03.893  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:05.895  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:05.896  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:06.492  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=316855, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:06.492  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:06.492  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=316855, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:06.492  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:07.300  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:07.301  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:07.302  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:07.302  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:08.006  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:08.039  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:09.521  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=319897, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:09.521  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:09.528  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=319897, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:09.530  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:10.142  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:10.155  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:12.167  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:12.169  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:12.495  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=322905, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:12.539  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:12.539  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=322905, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:12.539  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:13.272  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:13.272  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:13.272  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:13.283  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:14.147  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:14.184  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:15.496  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=325907, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:15.496  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:15.496  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=325907, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:15.496  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:16.125  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:16.125  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:18.275  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:18.277  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:18.504  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=328912, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:18.504  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:18.504  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=328912, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:18.504  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:19.287  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:19.299  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:19.299  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:19.303  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:20.459  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:20.460  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:21.564  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=331963, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:21.568  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:21.568  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=331963, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:21.568  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:22.444  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:22.478  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:24.441  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:24.447  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:24.568  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=334977, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:24.568  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:24.569  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=334977, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:24.580  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:25.242  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:25.244  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:25.244  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:25.244  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:26.712  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:26.741  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:27.615  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=338022, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:27.615  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:27.616  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=338022, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:27.616  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:28.662  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:28.662  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:30.620  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=341029, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:30.620  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:30.620  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=341029, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:30.620  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:30.900  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:30.900  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:31.270  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:31.270  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:31.271  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:31.271  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:32.986  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:32.986  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:33.619  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=344029, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:33.619  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:33.619  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=344029, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:33.619  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:35.001  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:35.002  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:36.649  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=347060, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:36.649  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:36.649  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=347060, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:36.649  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:37.009  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:37.013  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:37.324  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:37.366  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:37.366  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:37.367  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:39.142  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:39.147  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:39.699  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=350080, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:39.700  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:39.700  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=350080, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:39.700  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:41.132  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:41.132  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:42.722  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=353120, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:42.723  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:42.724  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=353120, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:42.725  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:43.126  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:43.127  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:43.285  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:43.288  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:43.288  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:43.288  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:45.150  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:45.151  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:45.774  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=356159, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:45.780  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:45.780  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=356159, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:45.780  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:47.165  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:47.176  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:48.828  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=359225, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:48.828  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:48.828  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=359225, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:48.828  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:49.292  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:49.292  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:49.292  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:49.292  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:49.347  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:49.347  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:51.330  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:51.331  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:51.829  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=362240, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:51.830  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:51.830  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=362240, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:51.830  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:52.633   522  1965 D CoreBackPreview: Window{f2129f3 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@57ec894, mPriority=-1, mIsAnimationCallback=false}
+10-26 13:09:52.719   522  1965 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:09:52.783   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:09:52.851   522  1965 D CoreBackPreview: Window{f2129f3 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@bca807e, mPriority=0, mIsAnimationCallback=true}
+10-26 13:09:53.352  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:53.358  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:54.837  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=365241, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:54.837  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:54.837  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=365241, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:54.838  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:55.329  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:55.329  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:55.329  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:09:55.330  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:55.352  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:55.352  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:57.373  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:57.379  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:57.845  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=368255, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:57.847  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:57.847  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=368255, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:09:57.847  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:59.600  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:09:59.608  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:00.859  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=371257, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:00.860  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:00.860  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=371257, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:00.860  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:01.350  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:10:01.350  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:01.350  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:10:01.350  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:01.589  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:01.589  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:03.212   522   955 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:10:03.230   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:10:03.580  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:03.581  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:03.874  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=374282, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:03.876  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:03.876  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=374282, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:03.876  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:05.607  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:05.613  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:06.878  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=377287, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:06.878  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:06.879  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=377287, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:06.879  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:07.324  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:10:07.324  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:07.324  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:10:07.340  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:07.674  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:07.674  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:09.653  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:09.653  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:09.896  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=380304, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:09.964  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:09.964  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=380304, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:09.964  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:11.649  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:11.649  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:12.906  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=383316, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:12.906  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:12.983  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=383316, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:12.983  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:13.334  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:10:13.334  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:13.334  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:10:13.335  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:13.710  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:13.722  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:15.762  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:15.763  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:15.934  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=386321, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:15.934  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:15.934  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=386321, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:15.934  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:17.826  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:17.832  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:18.015   522   955 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=de.abilas.gxtube/.MainActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-26 13:10:18.018   835   869 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{de.abilas.gxtube/de.abilas.gxtube.MainActivity}
+10-26 13:10:18.087   522   955 D CoreBackPreview: Window{f2129f3 u0 de.abilas.gxtube/de.abilas.gxtube.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@72ed378, mPriority=-1, mIsAnimationCallback=false}
+10-26 13:10:18.969  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=389379, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:18.970  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:18.970  1027  1027 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube : PlaybackState {state=PLAYING(3), position=-1, buffered position=-1, speed=0.0, updated=389379, actions=7339771, custom actions=[], active item id=0, error=null}
+10-26 13:10:18.970  1027  1027 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:19.303  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:10:19.303  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:19.303  1027  1027 V AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube
+10-26 13:10:19.303  1027  1027 W AudioMediaPlayerWrapper: onQueueChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:19.994  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
+10-26 13:10:20.007  1027  1027 W AudioMediaPlayerWrapper: onMetadataChanged(): de.abilas.gxtube tried to update with no new data
