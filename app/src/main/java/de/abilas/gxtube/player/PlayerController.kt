@@ -111,8 +111,14 @@ object PlayerController {
     val speed: StateFlow<Float> = _speed.asStateFlow()
 
     private val skippedSegments = mutableSetOf<String>()
+    /** Letzter automatischer Neuversuch (Video-ID und Zeitpunkt) – höchstens einer pro Minute und Video. */
     private var retriedVideo: String? = null
+    private var retriedAt = 0L
     private var qualityOverride: Int? = null
+    /** Laufender Qualitätswechsel – wird beim Videowechsel abgebrochen. */
+    private var qualityJob: Job? = null
+    /** App im Hintergrund (ohne Bild-im-Bild)? */
+    private var appInBackground = false
 
     val player: ExoPlayer by lazy { createPlayer() }
 
@@ -207,6 +213,7 @@ object PlayerController {
         }
         saveProgress()
         loadJob?.cancel()
+        qualityJob?.cancel()
         tickerJob?.cancel()
         player.stop()
         player.clearMediaItems()
@@ -228,6 +235,8 @@ object PlayerController {
     private fun load(video: VideoItem, startMs: Long?, shorts: Boolean, queue: List<VideoItem>, autoPlay: Boolean = true) {
         saveProgress()
         loadJob?.cancel()
+        // Ein noch laufender Qualitätswechsel würde sonst den Stream des alten Videos einsetzen
+        qualityJob?.cancel()
         skippedSegments.clear()
         player.stop()
         player.clearMediaItems()
@@ -259,7 +268,8 @@ object PlayerController {
                 else player.setMediaSource(resolved.source, resume)
                 player.setPlaybackSpeed(if (shorts) 1f else _speed.value)
                 player.prepare()
-                player.playWhenReady = autoPlay
+                // App inzwischen im Hintergrund und Hintergrundwiedergabe aus: nicht von selbst losspielen
+                player.playWhenReady = autoPlay && !(appInBackground && !Library.settings.backgroundPlay)
 
                 val aspect = if (resolved.width > 0 && resolved.height > 0) {
                     resolved.width.toFloat() / resolved.height
@@ -308,7 +318,7 @@ object PlayerController {
         viewCount = info.viewCount.takeIf { it >= 0 } ?: video.viewCount,
         uploadedAt = runCatching { info.uploadDate?.instant?.toEpochMilli() }.getOrNull() ?: video.uploadedAt,
         uploadedText = info.textualUploadDate ?: video.uploadedText,
-        isLive = info.streamType == StreamType.LIVE_STREAM,
+        isLive = info.streamType == StreamType.LIVE_STREAM || info.streamType == StreamType.AUDIO_LIVE_STREAM,
         isShort = video.isShort || info.isShortFormContent,
         verified = info.isUploaderVerified,
     )
@@ -462,20 +472,30 @@ object PlayerController {
     fun setQuality(height: Int) {
         val n = _now.value ?: return
         if (n.video.isTwitch) return setTwitchQuality(height)
+        // Beim Streamen wählt der PC die Qualität selbst
+        if (_remote.value) return
         val info = n.info ?: return
         qualityOverride = height
-        val pos = player.currentPosition
-        val wasPlaying = player.playWhenReady
-        scope.launch {
-            runCatching {
+        qualityJob?.cancel()
+        qualityJob = scope.launch {
+            try {
                 val resolved = withContext(Dispatchers.Default) {
                     StreamResolver.resolve(app, info, height, mediaItem(n.video))
                 }
+                // Inzwischen ein anderes Video oder auf den PC gewechselt: nichts mehr ersetzen
+                if (_now.value?.video?.id != n.video.id || _remote.value) return@launch
+                // Position erst jetzt lesen – das Video lief während des Ladens weiter
+                val pos = player.currentPosition
+                val wasPlaying = player.playWhenReady
                 player.setMediaSource(resolved.source, pos)
                 player.prepare()
                 player.playWhenReady = wasPlaying
                 _now.update { it?.copy(height = resolved.height) }
-            }.onFailure { _messages.tryEmit("Qualität konnte nicht gewechselt werden") }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                _messages.tryEmit("Qualität konnte nicht gewechselt werden")
+            }
         }
     }
 
@@ -533,18 +553,25 @@ object PlayerController {
     private fun handleError(error: PlaybackException) {
         Log.e(TAG, "Wiedergabefehler", error)
         val n = _now.value ?: return
-        if (n.video.isTwitch && error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
-            // Zu weit hinter dem Live-Rand (z. B. nach langem Puffern): wieder live einsteigen
-            TwitchPlayer.onStalled()
+        if ((n.video.isTwitch || n.isLive) && error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
+            // Zu weit hinter dem Live-Rand (z. B. nach langer Pause oder langem Puffern): wieder live einsteigen.
+            // Gilt auch für YouTube-Livestreams, nicht nur Twitch
+            if (n.video.isTwitch) TwitchPlayer.onStalled()
             player.seekToDefaultPosition()
             player.prepare()
             return
         }
         val http = generateSequence<Throwable>(error) { it.cause }
             .filterIsInstance<HttpDataSource.InvalidResponseCodeException>().firstOrNull()
-        // Abgelaufene oder gesperrte Stream-URL: einmal frisch laden
-        if (retriedVideo != n.video.id && (http != null || error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS)) {
+        // Abgelaufene oder gesperrte Stream-URL: frisch laden. Früher nur einmal pro Video überhaupt –
+        // nach langer Pause (Adressen laufen nach Stunden ab) kam dann beim zweiten Mal nur noch der Fehler.
+        // Jetzt einmal pro Minute, damit es keine Endlosschleife gibt
+        val now = System.currentTimeMillis()
+        if ((retriedVideo != n.video.id || now - retriedAt > 60_000) &&
+            (http != null || error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS)
+        ) {
             retriedVideo = n.video.id
+            retriedAt = now
             load(n.video, player.currentPosition.takeIf { it > 0 }, _mode.value == PlayerMode.SHORTS, n.queue)
             return
         }
@@ -560,6 +587,7 @@ object PlayerController {
     // ------------------------------------------------------------ Hintergrund / Bild-im-Bild
 
     fun onAppBackground(inPip: Boolean) {
+        appInBackground = !inPip
         if (inPip || _now.value == null || _remote.value) return
         when (_mode.value) {
             PlayerMode.WATCH -> if (Library.settings.backgroundPlay) setVideoTrackDisabled(true) else player.pause()
@@ -568,7 +596,10 @@ object PlayerController {
         }
     }
 
-    fun onAppForeground() = setVideoTrackDisabled(false)
+    fun onAppForeground() {
+        appInBackground = false
+        setVideoTrackDisabled(false)
+    }
 
     private fun setVideoTrackDisabled(disabled: Boolean) {
         val params = player.trackSelectionParameters
@@ -644,6 +675,7 @@ object PlayerController {
     private fun stopLocal() {
         saveProgress()
         loadJob?.cancel()
+        qualityJob?.cancel()
         tickerJob?.cancel()
         player.stop()
         player.clearMediaItems()

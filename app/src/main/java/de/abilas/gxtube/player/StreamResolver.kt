@@ -94,6 +94,21 @@ object StreamResolver {
     }.getOrDefault(false)
 
     private val vp9 by lazy { hasDecoder("video/x-vnd.on2.vp9", hardwareOnly = false) }
+    /**
+     * VP9 in Hardware? Über 1080p schafft ein Software-Decoder VP9 auf vielen Geräten nicht flüssig.
+     * Vor Android 10 gibt es isHardwareAccelerated nicht – dann am Namen erkennen
+     * (Software-Decoder heißen OMX.google.* bzw. c2.android.*).
+     */
+    private val vp9Hardware by lazy {
+        runCatching {
+            MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.any { info ->
+                !info.isEncoder &&
+                    info.supportedTypes.any { it.equals("video/x-vnd.on2.vp9", ignoreCase = true) } &&
+                    if (Build.VERSION.SDK_INT >= 29) info.isHardwareAccelerated
+                    else !info.name.startsWith("OMX.google.", true) && !info.name.startsWith("c2.android.", true)
+            }
+        }.getOrDefault(false)
+    }
     private val av1 by lazy { Build.VERSION.SDK_INT >= 29 && hasDecoder("video/av01", hardwareOnly = true) }
 
     /** 0 = H.264 (läuft überall), 1 = VP9, 2 = AV1 (nur mit Hardware-Decoder), null = nicht abspielbar */
@@ -101,10 +116,12 @@ object StreamResolver {
         val c = v.codec.orEmpty().lowercase()
         return when {
             c.startsWith("avc") -> 0
-            c.startsWith("vp9") || c.startsWith("vp09") -> if (vp9) 1 else null
+            c.startsWith("vp9") || c.startsWith("vp09") ->
+                if (vp9 && (vp9Hardware || heightOf(v) <= 1080)) 1 else null
             c.startsWith("av01") -> if (av1) 2 else null
             c.isEmpty() && v.format == MediaFormat.MPEG_4 -> 0
-            c.isEmpty() && v.format == MediaFormat.WEBM -> if (vp9) 1 else null
+            c.isEmpty() && v.format == MediaFormat.WEBM ->
+                if (vp9 && (vp9Hardware || heightOf(v) <= 1080)) 1 else null
             else -> null
         }
     }

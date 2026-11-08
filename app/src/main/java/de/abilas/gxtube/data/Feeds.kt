@@ -23,7 +23,12 @@ object SubscriptionFeed {
     private const val MAX_AGE_MS = 15 * 60 * 1000L
 
     @Serializable
-    private data class Cache(val updatedAt: Long = 0, val items: List<VideoItem> = emptyList())
+    private data class Cache(
+        val updatedAt: Long = 0,
+        val items: List<VideoItem> = emptyList(),
+        /** Für welche Abos (Kanal-Schlüssel) der Feed geladen wurde */
+        val subs: Set<String> = emptySet(),
+    )
 
     data class State(
         val items: List<VideoItem> = emptyList(),
@@ -38,26 +43,54 @@ object SubscriptionFeed {
     val state: StateFlow<State> = _state.asStateFlow()
     private val mutex = Mutex()
     private var cacheFile: File? = null
+    /** Abos, aus denen der aktuelle Feed stammt – ändern sie sich, wird neu geladen. */
+    @Volatile private var builtFor: Set<String> = emptySet()
+    /** Während eines Ladevorgangs angefordert: danach noch einmal prüfen. */
+    @Volatile private var pending = false
 
     fun init(context: Context) {
         val f = File(context.cacheDir, "subscription_feed.json")
         cacheFile = f
         if (f.exists()) {
             runCatching { Library.json.decodeFromString<Cache>(f.readText()) }
-                .onSuccess { _state.value = State(items = it.items, updatedAt = it.updatedAt) }
+                .onSuccess {
+                    _state.value = State(items = it.items, updatedAt = it.updatedAt)
+                    builtFor = it.subs
+                }
         }
     }
 
     suspend fun refresh(force: Boolean = false) {
-        if (!mutex.tryLock()) return
+        var forceNow = force
+        while (true) {
+            if (!mutex.tryLock()) {
+                // Läuft schon: danach noch einmal prüfen (z. B. wenn währenddessen abonniert wurde)
+                pending = true
+                return
+            }
+            pending = false
+            try {
+                refreshLocked(forceNow)
+            } finally {
+                mutex.unlock()
+            }
+            if (!pending) return
+            forceNow = false
+        }
+    }
+
+    private suspend fun refreshLocked(force: Boolean) {
         try {
             val current = _state.value
             val subs = Library.data.value.subscriptions
             if (subs.isEmpty()) {
                 _state.value = State()
+                builtFor = emptySet()
                 return
             }
-            if (!force && current.items.isNotEmpty() &&
+            val keys = subs.map { channelKey(it.url) }.toSet()
+            // Neu abonniert oder abbestellt: nicht 15 Minuten auf den alten Feed warten
+            if (!force && keys == builtFor && current.items.isNotEmpty() &&
                 System.currentTimeMillis() - current.updatedAt < MAX_AGE_MS
             ) return
 
@@ -89,12 +122,12 @@ object SubscriptionFeed {
                 .take(800)
             val now = System.currentTimeMillis()
             _state.update { it.copy(items = items, loading = false, updatedAt = now) }
+            builtFor = keys
             cacheFile?.let { f ->
-                runCatching { f.writeText(Library.json.encodeToString(Cache.serializer(), Cache(now, items))) }
+                runCatching { f.writeText(Library.json.encodeToString(Cache.serializer(), Cache(now, items, keys))) }
             }
         } finally {
             _state.update { it.copy(loading = false) }
-            mutex.unlock()
         }
     }
 

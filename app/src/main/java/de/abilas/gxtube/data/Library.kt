@@ -124,7 +124,12 @@ object Library {
         if (file.exists()) {
             runCatching { json.decodeFromString<LibraryData>(file.readText()) }
                 .onSuccess { _data.value = it }
-                .onFailure { Log.e(TAG, "Bibliothek konnte nicht gelesen werden", it) }
+                .onFailure {
+                    Log.e(TAG, "Bibliothek konnte nicht gelesen werden", it)
+                    // Sonst überschreibt die nächste Änderung die Datei mit einer leeren Bibliothek
+                    // und alle Abos/Verlauf wären weg: unlesbare Datei zur Rettung beiseitelegen
+                    runCatching { file.copyTo(File(file.parentFile, "library.broken-${System.currentTimeMillis()}.json"), overwrite = true) }
+                }
         }
         scope.launch {
             for (signal in saveSignal) {
