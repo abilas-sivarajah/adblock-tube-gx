@@ -1,11 +1,16 @@
 package de.abilas.gxtube.twitch
 
 import android.util.Log
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -40,14 +45,21 @@ import kotlin.random.Random
  *  - Ist die eigene Sitzung drei Aktualisierungen lang frei, geht es dorthin zurück.
  *  - Alles läuft auf einer Zeitleiste: Segmentnummern steigen nur, ein Quellwechsel ist eine
  *    Diskontinuität, ausgerichtet nach EXT-X-PROGRAM-DATE-TIME (nichts doppelt, nichts übersprungen).
+ *  - Sobald Werbung in der eigenen Sitzung auftaucht, wird zuerst per Ad-Spoofing (`RecordAdEvent`)
+ *    versucht, den Werbeblock direkt bei Twitch als beendet zu melden. Ist die eigene Playlist danach
+ *    sofort wieder werbefrei, läuft der Original-Stream ohne Wechsel weiter.
+ *  - Als Fallback (wenn die Werbung in der eigenen Playlist bleibt) bekommt der Player die Playlist
+ *    einer werbefreien Ersatz-Sitzung: sofort eine 360p-Brücke ("autoplay" als Android, sonst
+ *    "picture-by-picture" als iOS), volle Qualität, sobald eine Sitzung zweimal (1,5 s auseinander)
+ *    frei war.
  *  - Ist nichts werbefrei, ersetzen schwarze, stumme 1,024-s-Stücke ("hold") die Werbung.
- * Werbung wird nie als "gesehen" gemeldet.
  *
  * Die Playlists holt [TwitchDataSource] hierüber; die Videostücke lädt ExoPlayer selbst.
  */
 class TwitchAdBlock(
     client: OkHttpClient,
     private val holdTs: () -> ByteArray,
+    var adSpoofing: Boolean = true,
     private val events: (Event) -> Unit = {},
 ) {
     sealed interface Event {
@@ -57,6 +69,7 @@ class TwitchAdBlock(
         data object Unmasked : Event
         data class Bridge(val on: Boolean) : Event
         data class BackupUsed(val type: String) : Event
+        data class AdSpoofed(val id: String, val roll: String) : Event
     }
 
     private object T {
@@ -78,6 +91,7 @@ class TwitchAdBlock(
     private val contexts = ConcurrentHashMap<String, Ctx>()
     private val variantIndex = ConcurrentHashMap<String, Pair<Ctx, Variant>>()
     private val tokens = ConcurrentHashMap<String, Token>()
+    private val recentSpoofedAdIds = ConcurrentHashMap<String, Long>()
     private var sessionSeq = 0
     @Volatile private var fallbackMasked = false
 
@@ -230,6 +244,7 @@ class TwitchAdBlock(
 
     private class Ctx(val key: String, val login: String?, val vod: String?) {
         val sessions = ConcurrentHashMap<String, Session>()
+        val spoofedAdIds = HashSet<String>()
         val lock = Any()
         var gen = 0
         var tl = Timeline("native:0")
@@ -309,6 +324,7 @@ class TwitchAdBlock(
                 if (ctx.vod != null) processVod(text) else processLive(ctx, url, want, text)
             }
         }
+        if (hasAds(text) && adSpoofing) notifyAdComplete(null, text)
         // Playlist, die in keiner Master-Playlist stand (sollte nicht vorkommen): Werbung nur abdecken
         if (!hasAds(text)) {
             if (fallbackMasked) events(Event.Unmasked)
@@ -320,13 +336,158 @@ class TwitchAdBlock(
         return text
     }
 
+    // ------------------------------------------------------------ Ad-Spoofing (RecordAdEvent)
+
+    /**
+     * Meldet Werbe-Impressionen und Quartile (1..4) sowie das Pod-Ende an Twitchs GraphQL-API,
+     * damit Twitch den Werbeblock für diese Sitzung vorzeitig als gesehen beendet.
+     */
+    private fun notifyAdComplete(ctx: Ctx?, text: String): Boolean {
+        if (!adSpoofing || text.isEmpty()) return false
+        val adLines = text.lineSequence().filter { line ->
+            line.startsWith("#EXT-X-DATERANGE") &&
+                (line.contains("stitched-ad") || line.contains("twitch-stitched-ad") || line.contains("X-TV-TWITCH-AD-RADS-TOKEN"))
+        }.toList()
+        if (adLines.isEmpty()) return false
+
+        val explicitPodLen = Regex("X-TV-TWITCH-AD-POD-LENGTH=\"(\\d+)\"").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        val podLength = if (explicitPodLen > 0) explicitPodLen else adLines.size
+        val nowMs = now()
+        var spoofedAny = false
+
+        for ((i, line) in adLines.withIndex()) {
+            val attrs = parseAttrs(line)
+            val radToken = attrs["X-TV-TWITCH-AD-RADS-TOKEN"]?.takeIf { it.isNotEmpty() } ?: continue
+            val stitchedAdId = Regex("\\bID=\"([^\"]+)\"").find(line)?.groupValues?.get(1)
+                ?: attrs["ID"]?.takeIf { it.isNotEmpty() }
+                ?: attrs["X-TV-TWITCH-AD-COMMERCIAL-ID"]?.takeIf { it.isNotEmpty() }
+                ?: radToken.take(32)
+            if (stitchedAdId.isEmpty()) continue
+
+            val recentAt = recentSpoofedAdIds[stitchedAdId]
+            if (recentAt != null && nowMs - recentAt < 90_000L) {
+                ctx?.spoofedAdIds?.add(stitchedAdId)
+                continue
+            }
+            if (ctx != null && !ctx.spoofedAdIds.add(stitchedAdId)) continue
+            recentSpoofedAdIds[stitchedAdId] = nowMs
+            if (recentSpoofedAdIds.size > 50) {
+                recentSpoofedAdIds.entries.minByOrNull { it.value }?.key?.let { recentSpoofedAdIds.remove(it) }
+            }
+
+            val rollType = (attrs["X-TV-TWITCH-AD-ROLL-TYPE"] ?: "midroll").lowercase()
+            val adPos = (attrs["X-TV-TWITCH-AD-POD-POSITION"] ?: i.toString()).toIntOrNull() ?: 0
+            val dur = (attrs["X-TV-TWITCH-AD-DURATION"] ?: attrs["DURATION"] ?: attrs["X-TV-TWITCH-AD-POD-FILLED-DURATION"] ?: "30").toDoubleOrNull() ?: 30.0
+            val adDuration = max(1, dur.roundToInt())
+
+            fun makePacket(eventName: String, quartile: Int? = null, adTime: Int = 0): JsonObject {
+                val payload = buildJsonObject {
+                    put("stitched", true)
+                    put("ad_id", stitchedAdId)
+                    put("ad_session_id", attrs["X-TV-TWITCH-AD-SESSION-ID"] ?: attrs["X-TV-TWITCH-AD-POD-ID"] ?: "")
+                    put("roll_type", rollType)
+                    put("creative_id", attrs["X-TV-TWITCH-AD-CREATIVE-ID"] ?: "")
+                    put("order_id", attrs["X-TV-TWITCH-AD-ORDER-ID"] ?: "")
+                    put("line_item_id", attrs["X-TV-TWITCH-AD-LINE-ITEM-ID"] ?: "")
+                    put("player_mute", false)
+                    put("player_volume", 1.0)
+                    put("visible", true)
+                    put("duration", adDuration)
+                    put("ad_position", adPos)
+                    put("total_ads", podLength)
+                    put("ad_time", adTime)
+                    if (quartile != null) put("quartile", quartile)
+                }.toString()
+                return buildJsonObject {
+                    put("operationName", "ClientSideAdEventHandling_RecordAdEvent")
+                    putJsonObject("variables") {
+                        putJsonObject("input") {
+                            put("eventName", eventName)
+                            put("eventPayload", payload)
+                            put("radToken", radToken)
+                        }
+                    }
+                    putJsonObject("extensions") {
+                        putJsonObject("persistedQuery") {
+                            put("version", 1)
+                            put("sha256Hash", GQL_EVENT_HASH)
+                        }
+                    }
+                }
+            }
+
+            val isLastInPod = adPos + 1 >= podLength || i == adLines.lastIndex || (ctx != null && ctx.spoofedAdIds.size >= podLength)
+            val batch = buildJsonArray {
+                add(makePacket("video_ad_impression", adTime = 0))
+                add(makePacket("video_ad_quartile_complete", quartile = 1, adTime = (adDuration * 0.25).roundToInt()))
+                add(makePacket("video_ad_quartile_complete", quartile = 2, adTime = (adDuration * 0.5).roundToInt()))
+                add(makePacket("video_ad_quartile_complete", quartile = 3, adTime = (adDuration * 0.75).roundToInt()))
+                add(makePacket("video_ad_quartile_complete", quartile = 4, adTime = adDuration))
+                if (isLastInPod) add(makePacket("video_ad_pod_complete", adTime = adDuration))
+            }.toString()
+
+            var ok = false
+            val tries = if (TwitchApi.auth?.invoke() != null) listOf(true, false) else listOf(false)
+            for (asViewer in tries) {
+                try {
+                    val respText = fetchText(GQL_URL, batch, gqlHeaders(asViewer = asViewer))
+                    val parsed = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(respText) }.getOrNull()
+                    val hasError = when (parsed) {
+                        is JsonArray -> parsed.any { (it as? JsonObject)?.get("errors") != null }
+                        is JsonObject -> parsed["errors"] != null
+                        else -> false
+                    }
+                    if (!hasError) {
+                        ok = true
+                        break
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Ad-Spoofing fehlgeschlagen: ${e.message}")
+                }
+            }
+            if (ok) {
+                spoofedAny = true
+                events(Event.AdSpoofed(stitchedAdId, rollType))
+            } else {
+                ctx?.spoofedAdIds?.remove(stitchedAdId)
+                recentSpoofedAdIds.remove(stitchedAdId)
+            }
+        }
+        return spoofedAny
+    }
+
     // ------------------------------------------------------------ Live
 
     private fun processLive(ctx: Ctx, url: String, want: Variant, text: String): String {
         val tl = ctx.tl
-        val nat = parseMedia(text, url)
-        if (nat.segs.isEmpty() || nat.ended) return text
-        val natAds = hasAds(text)
+        var curText = text
+        var nat = parseMedia(curText, url)
+        if (nat.segs.isEmpty() || nat.ended) return curText
+        var natAds = hasAds(curText)
+
+        // 1. PRIMÄR: Ad-Spoofing versuchen, sobald Werbung in der eigenen Sitzung auftaucht.
+        // Wenn Twitch nach dem Spoofing (RecordAdEvent) die Werbung sofort aus der eigenen Playlist
+        // entfernt, läuft der Original-Stream ohne Qualitätswechsel direkt weiter.
+        if (natAds && adSpoofing) {
+            if (notifyAdComplete(ctx, curText)) {
+                runCatching {
+                    val freshText = fetchText(url)
+                    val freshNat = parseMedia(freshText, url)
+                    if (freshNat.segs.isNotEmpty() && !freshNat.ended) {
+                        if (!hasAds(freshText)) {
+                            curText = freshText
+                            nat = freshNat
+                            natAds = false
+                            ctx.cleanStreak = T.NATIVE_CLEAN
+                        } else if (freshNat.segs.any { it.ad } && !freshNat.segs.last().ad) {
+                            curText = freshText
+                            nat = freshNat
+                        }
+                    }
+                }
+            }
+        }
+
         trackNative(ctx, nat, natAds)
         val nid = ctx.nativeId
 
@@ -340,9 +501,18 @@ class TwitchAdBlock(
                 return out
             }
         }
+        // Werbung im oberen Teil des HLS-Fensters ist schon vorbei und am Live-Ende liegen wieder Live-Stücke
+        if (natAds && tl.source == nid && nat.segs.any { it.ad } && !nat.segs.last().ad) {
+            serve(ctx, url, nid, nat, strip = true)?.let { out ->
+                setBridge(ctx, false)
+                endAd(ctx)
+                return out
+            }
+        }
         if (natAds) startAd(ctx)
 
-        // Die Ersatz-Sitzung, die gerade läuft
+        // 2. FALLBACK: Wenn die Werbung trotz Ad-Spoofing weiter in der eigenen Playlist steckt,
+        // auf eine werbefreie Ersatz-Sitzung (360p-Brücke bzw. volle Qualität) ausweichen.
         val curType = typeOf(ctx.tl.source)
         val cur = curType?.let { backupPlaylist(ctx, it, want, false) }
         val curOk = cur != null && !cur.ads
@@ -410,7 +580,7 @@ class TwitchAdBlock(
         }
         // Beim Bisherigen bleiben, die Oberfläche deckt die Werbung ab
         if (cur != null) serve(ctx, url, cur.id, cur.parsed)?.let { return mask(ctx, it, false) }
-        return mask(ctx, serve(ctx, url, nid, nat, force = true) ?: text, false)
+        return mask(ctx, serve(ctx, url, nid, nat, force = true) ?: curText, false)
     }
 
     /** VODs: Die Playlist ist komplett, Werbestücke fallen einfach weg. */
@@ -450,6 +620,7 @@ class TwitchAdBlock(
         unmask(ctx)
         if (!ctx.inAd) return
         ctx.inAd = false
+        ctx.spoofedAdIds.clear()
         events(Event.AdEnd)
     }
 
@@ -487,9 +658,19 @@ class TwitchAdBlock(
 
     // ------------------------------------------------------------ Ersatz-Sitzungen
 
-    private fun gqlHeaders() = mapOf("Client-ID" to WEB_CLIENT, "Device-ID" to deviceId, "X-Device-Id" to deviceId)
+    private fun gqlHeaders(asViewer: Boolean = false): Map<String, String> {
+        val acc = if (asViewer) TwitchApi.auth?.invoke() else null
+        val h = LinkedHashMap<String, String>(5)
+        h["Client-ID"] = acc?.second ?: WEB_CLIENT
+        h["Device-ID"] = deviceId
+        h["X-Device-Id"] = deviceId
+        h["Client-Session-Id"] = sessionId
+        if (acc != null) h["Authorization"] = "OAuth ${acc.first}"
+        return h
+    }
 
-    private val deviceId = randomHex(32)
+    private val deviceId = sharedDeviceId
+    private val sessionId = sharedSessionId
 
     private fun tokenUntil(value: String): Long = runCatching {
         val exp = kotlinx.serialization.json.Json.parseToJsonElement(value).jsonObject["expires"]?.jsonPrimitive?.content?.toLong()
@@ -512,15 +693,27 @@ class TwitchAdBlock(
             put("query", TwitchApi.TOKEN_QUERY)
             put("variables", variables)
         }.toString()
-        val json = kotlinx.serialization.json.Json.parseToJsonElement(fetchText(GQL_URL, body, gqlHeaders())).jsonObject
-        val data = json["data"] as? JsonObject
-        val t = (data?.get("streamPlaybackAccessToken") ?: data?.get("videoPlaybackAccessToken")) as? JsonObject
-        val value = t?.get("value")?.jsonPrimitive?.content
-        val sig = t?.get("signature")?.jsonPrimitive?.content
-        if (value == null || sig == null) throw IOException("kein Token")
-        val auth = t["authorization"] as? JsonObject
-        if (auth?.get("isForbidden")?.jsonPrimitive?.content == "true") throw IOException("forbidden ${auth["forbiddenReasonCode"]?.jsonPrimitive?.content}")
-        return Token(value, sig, tokenUntil(value)).also { tokens[key] = it }
+        var lastError = "kein Token"
+        // Zuerst anonym; mit dem angemeldeten Konto nur, falls Twitch ablehnt (z. B. Sub-Only-Streams)
+        for (asViewer in listOf(false, true)) {
+            if (asViewer && TwitchApi.auth?.invoke() == null) break
+            val json = kotlinx.serialization.json.Json.parseToJsonElement(fetchText(GQL_URL, body, gqlHeaders(asViewer))).jsonObject
+            val data = json["data"] as? JsonObject
+            val t = (data?.get("streamPlaybackAccessToken") ?: data?.get("videoPlaybackAccessToken")) as? JsonObject
+            val auth = t?.get("authorization") as? JsonObject
+            if ((auth?.get("isForbidden") as? JsonPrimitive)?.contentOrNull == "true") {
+                lastError = "forbidden ${(auth["forbiddenReasonCode"] as? JsonPrimitive)?.contentOrNull.orEmpty()}"
+                continue
+            }
+            val value = (t?.get("value") as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotEmpty() }
+            val sig = (t?.get("signature") as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotEmpty() }
+            if (value != null && sig != null) {
+                return Token(value, sig, tokenUntil(value)).also { tokens[key] = it }
+            }
+            val errMsg = ((json["errors"] as? JsonArray)?.firstOrNull() as? JsonObject)?.get("message")?.let { (it as? JsonPrimitive)?.contentOrNull }
+            if (!errMsg.isNullOrBlank()) lastError = errMsg
+        }
+        throw IOException(lastError)
     }
 
     private fun openSession(ctx: Ctx, type: String, old: Session?): Session {
@@ -614,7 +807,10 @@ class TwitchAdBlock(
     private fun searchHq(ctx: Ctx, want: Variant, exclude: String?): Future<Backup?>? {
         ctx.scan?.let { if (!it.isDone) return it }
         if (ctx.bridgeSince != 0L && now() - ctx.bridgeSince < T.HQ_DWELL) return null
-        val order = HQ_TYPES.filter { it != exclude }
+        val order = HQ_TYPES.filter { it != exclude }.sortedWith(
+            compareByDescending<String> { ctx.sessions[it]?.cleanLooks ?: 0 }
+                .thenBy { ctx.sessions[it]?.errors ?: 0 },
+        )
         val f = scanner.submit<Backup?> {
             try {
                 for (type in order) {
@@ -675,7 +871,7 @@ class TwitchAdBlock(
                 return null
             }
             ctx.wait = null
-        } else if (tl.switched && tl.lastOut >= 0) {
+        } else if ((tl.switched || strip) && tl.lastOut >= 0) {
             // Gleiche Quelle, aber herausgeschnittene Werbung lässt eine Lücke: hinter einer Diskontinuität weiter
             val next = segs.firstOrNull { it.seq + tl.offset > tl.lastOut }
             if (next != null && next.seq + tl.offset > tl.lastOut + 1) switchTo(tl, id, segs, true)
@@ -762,6 +958,9 @@ class TwitchAdBlock(
         const val WEB_CLIENT = "kimne78kx3ncx6brgo4mv6wki5h1ko"
         const val GQL_URL = "https://gql.twitch.tv/gql"
         const val HOLD_URL = "https://www.twitch.tv/__adblock_gx_hold.ts"
+        const val GQL_EVENT_HASH = "7e6c69e6eb59f8ccb97ab73686f3d8b7d85a72a0298745ccd8bfc68e4054ca5b"
+        val sharedDeviceId: String = randomHex(32)
+        val sharedSessionId: String = randomHex(16)
         /** Nur 360p, aber schnell und meist werbefrei – zwei getrennte Sitzungen, damit eine Werbung nicht beide trifft */
         private val LQ_TYPES = listOf("autoplay", "picture-by-picture")
         private val HQ_TYPES = listOf("popout", "frontpage", "mobile_web", "site")
@@ -778,8 +977,17 @@ class TwitchAdBlock(
             RegexOption.IGNORE_CASE,
         )
         private val SEG_TAG = Regex("^#EXT(INF|-X-(DISCONTINUITY$|PROGRAM-DATE-TIME|MAP|KEY|BYTERANGE|GAP|TWITCH-PREFETCH|PART|PRELOAD-HINT))")
+        private val ATTR_REGEX = Regex("([A-Z0-9-]+)=(\"[^\"]*\"|[^,]*)", RegexOption.IGNORE_CASE)
 
         fun randomHex(n: Int): String = buildString { repeat(n) { append("0123456789abcdef"[Random.nextInt(16)]) } }
+
+        fun parseAttrs(line: String): Map<String, String> {
+            val out = HashMap<String, String>()
+            for (m in ATTR_REGEX.findAll(line)) {
+                out[m.groupValues[1].uppercase()] = m.groupValues[2].removeSurrounding("\"")
+            }
+            return out
+        }
 
         private fun attr(line: String, name: String): String =
             Regex("[:,]$name=(\"[^\"]*\"|[^,]*)").find(line)?.groupValues?.get(1)?.trim('"').orEmpty()
@@ -798,7 +1006,7 @@ class TwitchAdBlock(
             return title.isNotEmpty() && title != "live"
         }
 
-        private fun isAdUri(uri: String) = Regex("stitched|/adsquared/|/_404/").containsMatchIn(uri)
+        private fun isAdUri(uri: String) = Regex("stitched|/adsquared/|/_404/|edge\\.ads\\.twitch\\.tv|amazon-adsystem", RegexOption.IGNORE_CASE).containsMatchIn(uri)
 
         private fun isAdMarker(line: String): Boolean {
             if (!line.startsWith("#EXT-X-DATERANGE")) return false
@@ -911,7 +1119,9 @@ class TwitchAdBlock(
                     inHeader = false
                 }
                 if (lastUri >= 0 && i > lastUri) {
-                    p.tail += line // Prefetch-Hinweise usw.
+                    if (!isAdLine(line) && !(line.startsWith("#EXT-X-TWITCH-PREFETCH:") && isAdUri(line.substring(23)))) {
+                        p.tail += line // Prefetch-Hinweise usw.
+                    }
                     continue
                 }
                 if (line == "#EXT-X-DISCONTINUITY") {

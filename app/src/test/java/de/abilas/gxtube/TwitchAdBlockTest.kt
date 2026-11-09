@@ -29,6 +29,7 @@ class TwitchAdBlockTest {
         "#EXTINF:2.000,Amazon|123", "ad2.ts",
         "#EXT-X-DISCONTINUITY", "#EXT-X-PROGRAM-DATE-TIME:2026-10-24T20:00:06.000Z", "#EXTINF:2.000,live", "https://video-edge.ttvnw.net/v1/segment/b.ts",
         "#EXTINF:2.000,live", "https://video-edge.ttvnw.net/v1/segment/c.ts",
+        "#EXT-X-TWITCH-PREFETCH:https://video-edge.ttvnw.net/v1/segment/stitched-ad-prefetch.ts",
         "#EXT-X-TWITCH-PREFETCH:https://video-edge.ttvnw.net/v1/segment/d.ts",
     ).joinToString("\n")
     private val base = "https://video-weaver.fra05.hls.ttvnw.net/v1/playlist/x.m3u8"
@@ -50,7 +51,7 @@ class TwitchAdBlockTest {
         )
         assertEquals(listOf("#EXTM3U", "#EXT-X-VERSION:3", "#EXT-X-TARGETDURATION:6", "#EXT-X-MEDIA-SEQUENCE:", "#EXT-X-TWITCH-ELAPSED-SECS:200.0"), p.header)
         assertEquals(listOf("#EXT-X-TWITCH-PREFETCH:https://video-edge.ttvnw.net/v1/segment/d.ts"), p.tail)
-        assertFalse(TwitchAdBlock.hasAds(playlist.lines().filterNot { TwitchAdBlock.isAdLine(it) || "Amazon" in it || "ad1" in it || "ad2" in it }.joinToString("\n")))
+        assertFalse(TwitchAdBlock.hasAds(playlist.lines().filterNot { TwitchAdBlock.isAdLine(it) || "Amazon" in it || "ad1" in it || "ad2" in it || "stitched-ad" in it }.joinToString("\n")))
     }
 
     @Test

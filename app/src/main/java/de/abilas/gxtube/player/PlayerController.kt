@@ -297,6 +297,7 @@ object PlayerController {
                     val segments = SponsorBlock.segments(enriched.id, settings.sponsorCategories)
                     if (segments.isNotEmpty()) {
                         _now.update { n -> if (n?.video?.id == enriched.id) n.copy(segments = segments) else n }
+                        if (_now.value?.video?.id == enriched.id && player.playWhenReady) skipSegments(segments)
                     }
                 }
             } catch (e: CancellationException) {
@@ -630,7 +631,17 @@ object PlayerController {
             pos >= it.startMs && pos < it.endMs - 500 && it.uuid !in skippedSegments
         } ?: return
         skippedSegments += seg.uuid
-        player.seekTo(seg.endMs)
+        var endMs = seg.endMs
+        // Direkt aneinandergrenzende oder überlappende Segmente in einem Sprung zusammenfassen
+        while (true) {
+            val next = segments.firstOrNull {
+                it.uuid !in skippedSegments && it.startMs <= endMs + 500 && it.endMs > endMs
+            } ?: break
+            skippedSegments += next.uuid
+            endMs = next.endMs
+        }
+        val dur = player.duration.takeIf { it != C.TIME_UNSET && it > 0 }
+        player.seekTo(if (dur != null) minOf(endMs, dur) else endMs)
         _messages.tryEmit("${SponsorBlock.label(seg.category)} übersprungen")
     }
 

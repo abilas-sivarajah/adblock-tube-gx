@@ -118,7 +118,7 @@ object TwitchApi {
             "  streamPlaybackAccessToken(channelName: \$login, params: {platform: \$platform, playerBackend: \"mediaplayer\", playerType: \$playerType}) @include(if: \$isLive) { value signature authorization { isForbidden forbiddenReasonCode } __typename }" +
             "  videoPlaybackAccessToken(id: \$vodID, params: {platform: \$platform, playerBackend: \"mediaplayer\", playerType: \$playerType}) @include(if: \$isVod) { value signature __typename } }"
 
-    suspend fun gql(query: String, variables: JsonObject = JsonObject(emptyMap()), withAuth: Boolean = false): JsonObject = withContext(Dispatchers.IO) {
+    suspend fun gql(query: String, variables: JsonObject = JsonObject(emptyMap()), withAuth: Boolean = false, clientId: String? = null): JsonObject = withContext(Dispatchers.IO) {
         val account = if (withAuth) auth?.invoke() ?: throw TwitchException("Nicht bei Twitch angemeldet", signIn = true) else null
         val body = buildJsonObject {
             put("query", query)
@@ -126,7 +126,10 @@ object TwitchApi {
         }.toString()
         val req = Request.Builder()
             .url(GQL)
-            .header("Client-ID", account?.second ?: TV_CLIENT)
+            .header("Client-ID", account?.second ?: clientId ?: TV_CLIENT)
+            .header("Device-ID", TwitchAdBlock.sharedDeviceId)
+            .header("X-Device-Id", TwitchAdBlock.sharedDeviceId)
+            .header("Client-Session-Id", TwitchAdBlock.sharedSessionId)
             .apply { if (account != null) header("Authorization", "OAuth ${account.first}") }
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
@@ -388,7 +391,7 @@ object TwitchApi {
         var last: Exception? = null
         for (withAuth in if (auth?.invoke() != null) listOf(true, false) else listOf(false)) {
             try {
-                val d = gql(TOKEN_QUERY, v, withAuth)
+                val d = gql(TOKEN_QUERY, v, withAuth, clientId = WEB_CLIENT)
                 val t = (d["streamPlaybackAccessToken"] ?: d["videoPlaybackAccessToken"]).obj
                     ?: throw TwitchException(if (vod != null) "Dieses Video gibt es nicht mehr" else "Kanal nicht gefunden")
                 val value = t["value"].str

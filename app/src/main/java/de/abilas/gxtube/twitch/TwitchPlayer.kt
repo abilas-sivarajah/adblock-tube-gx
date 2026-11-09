@@ -43,6 +43,7 @@ object TwitchPlayer {
                     TwitchAdBlock.Event.Unmasked -> s.copy(masked = false, hold = false)
                     is TwitchAdBlock.Event.Bridge -> s.copy(bridge = e.on)
                     is TwitchAdBlock.Event.BackupUsed -> s
+                    is TwitchAdBlock.Event.AdSpoofed -> s
                 }
             }
         }

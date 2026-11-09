@@ -26,19 +26,33 @@ class TwitchAdSkipTest {
         var head = 50
         /** Sitzungen mit Werbung */
         val ads = HashSet<String>()
+        /** Sitzungen, bei denen oben im HLS-Fenster noch alte Werbung steht, am Ende aber schon wieder Live-Stücke */
+        val tailLive = HashSet<String>()
+        /** Ob Ad-Spoofing (RecordAdEvent) die Werbung auf der Hauptsitzung sofort beendet */
+        var spoofClearsNativeAds = false
+        var spoofTailLiveNative = false
         /** Stücke, die eine Sitzung hinter der Live-Kante liegt */
         val lag = HashMap<String, Int>()
         val tokenRequests = ArrayList<String>()
+        val adEvents = ArrayList<String>()
 
         fun playlist(session: String): String {
             val end = head - (lag[session] ?: 0)
             val offset = session.hashCode().mod(1000) * 10L // jede Sitzung nummeriert anders
             val b = StringBuilder("#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:${end - 5 + offset}\n")
             val ad = session in ads
-            if (ad) b.append("#EXT-X-DATERANGE:ID=\"stitched-ad-1\",CLASS=\"twitch-stitched-ad\",START-DATE=\"${Instant.ofEpochMilli(T0)}\",DURATION=30.0\n")
+            val tl = session in tailLive
+            if (ad || tl) {
+                b.append(
+                    "#EXT-X-DATERANGE:ID=\"stitched-ad-$head\",CLASS=\"twitch-stitched-ad\",START-DATE=\"${Instant.ofEpochMilli(T0)}\",DURATION=30.0," +
+                        "X-TV-TWITCH-AD-RADS-TOKEN=\"rads-token-$session\",X-TV-TWITCH-AD-COMMERCIAL-ID=\"comm-$head\"," +
+                        "X-TV-TWITCH-AD-CREATIVE-ID=\"creative-1\",X-TV-TWITCH-AD-LINE-ITEM-ID=\"line-1\",X-TV-TWITCH-AD-ORDER-ID=\"order-1\",X-TV-TWITCH-AD-ROLL-TYPE=\"MIDROLL\"\n",
+                )
+            }
             for (n in end - 5 until end) {
+                val segAd = ad || (tl && n < end - 2)
                 b.append("#EXT-X-PROGRAM-DATE-TIME:${Instant.ofEpochMilli(T0 + n * 2000L)}\n")
-                b.append(if (ad) "#EXTINF:2.000,Amazon|1\n" else "#EXTINF:2.000,live\n")
+                b.append(if (segAd) "#EXTINF:2.000,Amazon|1\n" else "#EXTINF:2.000,live\n")
                 b.append("https://video-edge.example/$session/$n.ts\n")
             }
             return b.toString()
@@ -54,10 +68,22 @@ class TwitchAdSkipTest {
             val body = when {
                 url.startsWith("https://gql.twitch.tv/") -> {
                     val sent = Buffer().also { req.body!!.writeTo(it) }.readUtf8()
-                    val type = Regex("\"playerType\":\"([^\"]+)\"").find(sent)!!.groupValues[1]
-                    val platform = Regex("\"platform\":\"([^\"]+)\"").find(sent)!!.groupValues[1]
-                    synchronized(tokenRequests) { tokenRequests += "$type/$platform" }
-                    "{\"data\":{\"streamPlaybackAccessToken\":{\"value\":\"$type\",\"signature\":\"sig\",\"authorization\":{\"isForbidden\":false}}}}"
+                    if (sent.contains("ClientSideAdEventHandling_RecordAdEvent")) {
+                        synchronized(adEvents) {
+                            Regex("\"eventName\":\"([^\"]+)\"").findAll(sent).forEach { adEvents += it.groupValues[1] }
+                        }
+                        if (spoofClearsNativeAds) ads.remove("native")
+                        if (spoofTailLiveNative) {
+                            ads.remove("native")
+                            tailLive += "native"
+                        }
+                        "[{\"data\":{\"recordAdEvent\":{\"__typename\":\"RecordAdEventPayload\"}}}]"
+                    } else {
+                        val type = Regex("\"playerType\":\"([^\"]+)\"").find(sent)!!.groupValues[1]
+                        val platform = Regex("\"platform\":\"([^\"]+)\"").find(sent)!!.groupValues[1]
+                        synchronized(tokenRequests) { tokenRequests += "$type/$platform" }
+                        "{\"data\":{\"streamPlaybackAccessToken\":{\"value\":\"$type\",\"signature\":\"sig\",\"authorization\":{\"isForbidden\":false}}}}"
+                    }
                 }
                 url.contains("usher.ttvnw.net/") -> master(req.url.queryParameter("token")!!)
                 url.contains("/v1/playlist/") -> playlist(url.substringAfterLast('/').substringBefore("-720"))
@@ -95,7 +121,48 @@ class TwitchAdSkipTest {
         assertTrue("Stücke aus picture-by-picture: ${p.segs.map { it.uri }}", p.segs.last().uri.contains("/picture-by-picture/"))
         assertFalse(p.segs.any { it.ad })
         assertTrue(events.toString(), events.any { it.contains("Bridge(on=true)") })
+        assertTrue(tw.adEvents.toString(), "video_ad_pod_complete" in tw.adEvents)
         assertTrue(tw.tokenRequests.toString(), "picture-by-picture/ios" in tw.tokenRequests && "autoplay/android" in tw.tokenRequests)
+    }
+
+    @Test
+    fun adSpoofingClearsNativeAdsBeforeBridgeFallback() {
+        val tw = FakeTwitch()
+        tw.spoofClearsNativeAds = true
+        val events = ArrayList<String>()
+        val ab = player(tw, events)
+        refresh(ab)
+        tw.ads += "native"
+        tw.head++
+        val p = refresh(ab)
+        assertEquals("kein schwarzes Bild", 0, hold(p))
+        assertTrue("bleibt auf der Hauptsitzung: ${p.segs.map { it.uri }}", p.segs.last().uri.contains("/native/"))
+        assertFalse(p.segs.any { it.ad })
+        assertTrue("Ad-Spoofing wurde gesendet: ${tw.adEvents}", "video_ad_impression" in tw.adEvents && "video_ad_pod_complete" in tw.adEvents)
+        assertTrue("Keine Ersatz-Sitzung nötig, wenn Ad-Spoofing klappt", tw.tokenRequests.isEmpty())
+        assertTrue(events.toString(), events.any { it.contains("AdSpoofed") })
+        assertFalse(events.toString(), events.any { it.contains("Bridge(on=true)") })
+    }
+
+    @Test
+    fun adSpoofingStripsRemainingWindowAdsWhenTailIsLive() {
+        val tw = FakeTwitch()
+        tw.spoofTailLiveNative = true
+        val events = ArrayList<String>()
+        val ab = player(tw, events)
+        val first = refresh(ab)
+        val prevLastSeq = first.segs.last().seq
+        tw.ads += "native"
+        tw.head += 2
+        val p = refresh(ab)
+        assertEquals("kein schwarzes Bild", 0, hold(p))
+        assertTrue("bleibt auf der Hauptsitzung", p.segs.last().uri.contains("/native/"))
+        assertFalse("alte Werbung im Fenster wurde herausgeschnitten", p.segs.any { it.ad })
+        assertTrue("Keine Ersatz-Sitzung nötig", tw.tokenRequests.isEmpty())
+        assertTrue("Nummern steigen weiter", p.segs.last().seq > prevLastSeq)
+        for (i in 1 until p.segs.size) {
+            assertEquals("lückenlose Nummerierung", p.segs[i - 1].seq + 1, p.segs[i].seq)
+        }
     }
 
     @Test
