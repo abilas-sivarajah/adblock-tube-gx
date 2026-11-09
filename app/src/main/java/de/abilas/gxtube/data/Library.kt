@@ -74,6 +74,8 @@ data class Settings(
     val twitchLanguage: String = "de",
     /** Chat unter Twitch-Live-Streams zeigen */
     val twitchChat: Boolean = true,
+    /** Twitch-Werbung zuerst als gesehen melden (Ad-Spoofing), sonst übernehmen allein die Ersatz-Sitzungen */
+    val twitchAdSpoofing: Boolean = true,
 )
 
 /** Shorts herausfiltern, wenn sie in den Einstellungen ausgeschaltet sind. */

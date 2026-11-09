@@ -31,6 +31,9 @@ class TwitchAdSkipTest {
         /** Ob Ad-Spoofing (RecordAdEvent) die Werbung auf der Hauptsitzung sofort beendet */
         var spoofClearsNativeAds = false
         var spoofTailLiveNative = false
+        /** Twitch lehnt RecordAdEvent ab */
+        var spoofFails = false
+        var spoofCalls = 0
         /** Stücke, die eine Sitzung hinter der Live-Kante liegt */
         val lag = HashMap<String, Int>()
         val tokenRequests = ArrayList<String>()
@@ -69,6 +72,9 @@ class TwitchAdSkipTest {
                 url.startsWith("https://gql.twitch.tv/") -> {
                     val sent = Buffer().also { req.body!!.writeTo(it) }.readUtf8()
                     if (sent.contains("ClientSideAdEventHandling_RecordAdEvent")) {
+                        synchronized(adEvents) { spoofCalls++ }
+                        if (spoofFails) return@Interceptor Response.Builder().request(req).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                            .body("[{\"errors\":[{\"message\":\"service error\"}]}]".toResponseBody("application/json".toMediaType())).build()
                         synchronized(adEvents) {
                             Regex("\"eventName\":\"([^\"]+)\"").findAll(sent).forEach { adEvents += it.groupValues[1] }
                         }
@@ -97,8 +103,8 @@ class TwitchAdSkipTest {
     private val usher = "https://usher.ttvnw.net/api/channel/hls/streamer.m3u8?token=native&sig=x&supported_codecs=avc1"
     private val media = "https://video-weaver.example.hls.ttvnw.net/v1/playlist/native-720.m3u8"
 
-    private fun player(tw: FakeTwitch, events: MutableList<String>): TwitchAdBlock {
-        val ab = TwitchAdBlock(tw.client, { ByteArray(188) }) { e -> synchronized(events) { events += e.toString() } }
+    private fun player(tw: FakeTwitch, events: MutableList<String>, spoofing: () -> Boolean = { true }): TwitchAdBlock {
+        val ab = TwitchAdBlock(tw.client, { ByteArray(188) }, spoofing) { e -> synchronized(events) { events += e.toString() } }
         ab.handle(usher)
         return ab
     }
@@ -142,6 +148,39 @@ class TwitchAdSkipTest {
         assertTrue("Keine Ersatz-Sitzung nötig, wenn Ad-Spoofing klappt", tw.tokenRequests.isEmpty())
         assertTrue(events.toString(), events.any { it.contains("AdSpoofed") })
         assertFalse(events.toString(), events.any { it.contains("Bridge(on=true)") })
+    }
+
+    @Test
+    fun failedAdSpoofingIsNotRetriedOnEveryRefresh() {
+        val tw = FakeTwitch()
+        tw.spoofFails = true
+        val events = ArrayList<String>()
+        val ab = player(tw, events)
+        refresh(ab)
+        tw.ads += "native"
+        tw.head++
+        val p = refresh(ab)
+        val calls = tw.spoofCalls
+        assertTrue("einmal versucht (anonym)", calls >= 1)
+        assertFalse("Werbung trotzdem weg (Ersatz-Sitzung)", p.segs.any { it.ad })
+        assertFalse(events.toString(), events.any { it.contains("AdSpoofed") })
+        refresh(ab)
+        refresh(ab)
+        assertEquals("gleiche Werbung nicht sofort wieder gemeldet", calls, tw.spoofCalls)
+    }
+
+    @Test
+    fun adSpoofingSwitchedOffSendsNothing() {
+        val tw = FakeTwitch()
+        tw.spoofClearsNativeAds = true
+        val events = ArrayList<String>()
+        val ab = player(tw, events, spoofing = { false })
+        refresh(ab)
+        tw.ads += "native"
+        tw.head++
+        val p = refresh(ab)
+        assertEquals(0, tw.spoofCalls)
+        assertFalse(p.segs.any { it.ad })
     }
 
     @Test

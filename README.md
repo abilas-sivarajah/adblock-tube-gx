@@ -92,7 +92,8 @@ Protokoll: [PROTOCOL.md](https://github.com/abilas-sivarajah/adblock-tube-gx-des
   sofort in 360p (zwei getrennte Sitzungen als Android- und iOS-App), dann wieder in voller Qualität – und kehrt
   danach zum eigenen Stream zurück. Nur wenn Twitch in allen Sitzungen Werbung zeigt, läuft für die Dauer der
   Werbung ein schwarzes Bild („Twitch zeigt gerade überall Werbung“).
-  Werbung wird nie als „gesehen“ gemeldet.
+  Zuerst wird die Werbung per Ad-Spoofing als „gesehen“ gemeldet – oft endet die Pause dann sofort ohne Wechsel.
+  Abschaltbar unter Einstellungen → Twitch („Werbung als gesehen melden“).
 - **Chat:** Mitlesen geht ohne Konto. Zum **Schreiben** unter Einstellungen → Twitch (oder direkt im Chat)
   **bei Twitch anmelden** – wie bei Twitch auf dem Fernseher: „Hier in der App anmelden“ (der Code ist schon
   eingetragen) oder auf einem anderen Gerät `twitch.tv/activate` öffnen und den Code eingeben.

@@ -2,6 +2,7 @@ package de.abilas.gxtube.twitch
 
 import android.util.Log
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
@@ -59,7 +60,8 @@ import kotlin.random.Random
 class TwitchAdBlock(
     client: OkHttpClient,
     private val holdTs: () -> ByteArray,
-    var adSpoofing: Boolean = true,
+    /** Ad-Spoofing an? Wird bei jeder Playlist neu gefragt, damit der Schalter in den Einstellungen sofort greift. */
+    private val spoofingEnabled: () -> Boolean = { true },
     private val events: (Event) -> Unit = {},
 ) {
     sealed interface Event {
@@ -92,6 +94,9 @@ class TwitchAdBlock(
     private val variantIndex = ConcurrentHashMap<String, Pair<Ctx, Variant>>()
     private val tokens = ConcurrentHashMap<String, Token>()
     private val recentSpoofedAdIds = ConcurrentHashMap<String, Long>()
+    /** Werbe-ID -> Zeitpunkt des letzten gescheiterten Versuchs (nicht bei jeder Aktualisierung erneut melden) */
+    private val failedSpoofAt = ConcurrentHashMap<String, Long>()
+    private val adSpoofing: Boolean get() = spoofingEnabled()
     private var sessionSeq = 0
     @Volatile private var fallbackMasked = false
 
@@ -324,7 +329,8 @@ class TwitchAdBlock(
                 if (ctx.vod != null) processVod(text) else processLive(ctx, url, want, text)
             }
         }
-        if (hasAds(text) && adSpoofing) notifyAdComplete(null, text)
+        // Nicht auf die Meldung warten: Der Player wartet sonst auf seine Playlist
+        if (hasAds(text) && adSpoofing) runCatching { scanner.execute { runCatching { notifyAdComplete(null, text) } } }
         // Playlist, die in keiner Master-Playlist stand (sollte nicht vorkommen): Werbung nur abdecken
         if (!hasAds(text)) {
             if (fallbackMasked) events(Event.Unmasked)
@@ -369,6 +375,9 @@ class TwitchAdBlock(
                 ctx?.spoofedAdIds?.add(stitchedAdId)
                 continue
             }
+            // Gerade erst gescheitert: nicht jede Aktualisierung mit denselben aussichtslosen Anfragen aufhalten
+            val failedAt = failedSpoofAt[stitchedAdId]
+            if (failedAt != null && nowMs - failedAt < SPOOF_RETRY_MS) continue
             if (ctx != null && !ctx.spoofedAdIds.add(stitchedAdId)) continue
             recentSpoofedAdIds[stitchedAdId] = nowMs
             if (recentSpoofedAdIds.size > 50) {
@@ -432,10 +441,11 @@ class TwitchAdBlock(
                 try {
                     val respText = fetchText(GQL_URL, batch, gqlHeaders(asViewer = asViewer))
                     val parsed = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(respText) }.getOrNull()
+                    fun JsonElement?.failed() = this !is JsonObject || (this["errors"] as? JsonArray)?.isNotEmpty() == true
                     val hasError = when (parsed) {
-                        is JsonArray -> parsed.any { (it as? JsonObject)?.get("errors") != null }
-                        is JsonObject -> parsed["errors"] != null
-                        else -> false
+                        is JsonArray -> parsed.isEmpty() || parsed.any { it.failed() }
+                        is JsonObject -> parsed.failed()
+                        else -> true // keine Antwort, die man lesen kann: nicht als Erfolg werten
                     }
                     if (!hasError) {
                         ok = true
@@ -446,11 +456,16 @@ class TwitchAdBlock(
                 }
             }
             if (ok) {
+                failedSpoofAt.remove(stitchedAdId)
                 spoofedAny = true
                 events(Event.AdSpoofed(stitchedAdId, rollType))
             } else {
                 ctx?.spoofedAdIds?.remove(stitchedAdId)
                 recentSpoofedAdIds.remove(stitchedAdId)
+                failedSpoofAt[stitchedAdId] = nowMs
+                if (failedSpoofAt.size > 50) {
+                    failedSpoofAt.entries.minByOrNull { it.value }?.key?.let { failedSpoofAt.remove(it) }
+                }
             }
         }
         return spoofedAny
@@ -958,6 +973,7 @@ class TwitchAdBlock(
         const val WEB_CLIENT = "kimne78kx3ncx6brgo4mv6wki5h1ko"
         const val GQL_URL = "https://gql.twitch.tv/gql"
         const val HOLD_URL = "https://www.twitch.tv/__adblock_gx_hold.ts"
+        private const val SPOOF_RETRY_MS = 60_000L
         const val GQL_EVENT_HASH = "7e6c69e6eb59f8ccb97ab73686f3d8b7d85a72a0298745ccd8bfc68e4054ca5b"
         val sharedDeviceId: String = randomHex(32)
         val sharedSessionId: String = randomHex(16)

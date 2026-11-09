@@ -8,6 +8,7 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
 import de.abilas.gxtube.data.Http
+import de.abilas.gxtube.data.Library
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,7 +35,7 @@ object TwitchPlayer {
 
     fun init(context: Context) {
         val app = context.applicationContext
-        adBlock = TwitchAdBlock(Http.client, holdTs = { app.assets.open("twitch_hold.ts").use { it.readBytes() } }) { e ->
+        adBlock = TwitchAdBlock(Http.client, holdTs = { app.assets.open("twitch_hold.ts").use { it.readBytes() } }, spoofingEnabled = { Library.settings.twitchAdSpoofing }) { e ->
             _ads.update { s ->
                 when (e) {
                     TwitchAdBlock.Event.AdStart -> s.copy(blocked = s.blocked + 1)

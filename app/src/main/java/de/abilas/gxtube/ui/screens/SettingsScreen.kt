@@ -122,6 +122,13 @@ fun SettingsScreen() {
                     Library.updateSettings { st -> st.copy(twitchChat = it) }
                 }
             }
+            item {
+                SwitchRow(
+                    "Werbung als gesehen melden",
+                    "Ad-Spoofing: meldet Twitch-Werbung sofort als angesehen, damit der Stream ohne Wechsel weiterläuft. Nutzt dein Konto, wenn du angemeldet bist – aus, wenn du das nicht willst; dann übernehmen allein die Ersatz-Sitzungen",
+                    s.twitchAdSpoofing,
+                ) { Library.updateSettings { st -> st.copy(twitchAdSpoofing = it) } }
+            }
             item { ChoiceRow("Beliebte Streams", twitchLanguages[s.twitchLanguage] ?: s.twitchLanguage) { dialog = "twitch-language" } }
             item {
                 Text(
