@@ -150,7 +150,11 @@ fun TwitchWatchDetails(n: NowPlaying) {
                 Text(v.channelName, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Yt.colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 n.twitch?.followers?.takeIf { it >= 0 }?.let { Text("${Fmt.count(it)} Follower", fontSize = 12.sp, color = Yt.colors.textSecondary) }
             }
-            if (login != null) FollowButton(login, n.twitch?.userId, v.channelName, v.channelAvatar)
+            if (login != null) {
+                FavoriteButton(login, n.twitch?.userId, v.channelName, v.channelAvatar)
+                Spacer(Modifier.width(6.dp))
+                FollowButton(login, n.twitch?.userId, v.channelName, v.channelAvatar)
+            }
             Spacer(Modifier.width(6.dp))
             IconButton(onClick = { shareText(context, v.shareUrl) }) { Icon(Icons.Outlined.Share, "Teilen", tint = Yt.colors.text) }
             // Läuft der Stream am PC: Chat dort ein-/ausblenden

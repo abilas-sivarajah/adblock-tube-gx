@@ -93,6 +93,8 @@ data class LibraryData(
     /** "Kein Interesse" */
     val hidden: Set<String> = emptySet(),
     val twitchFollows: List<TwitchFollow> = emptyList(),
+    /** Twitch-Favoriten (Stern) – nur auf dem Handy, unabhängig vom Folgen */
+    val twitchFavorites: List<TwitchFollow> = emptyList(),
     val settings: Settings = Settings(),
 )
 

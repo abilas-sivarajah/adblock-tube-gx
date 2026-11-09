@@ -31,6 +31,11 @@ object TwitchFollows {
 
     fun isFollowing(data: LibraryData, login: String?) = login != null && data.twitchFollows.any { it.login == login }
 
+    /** Hinweis unten einblenden (auch für die Favoriten). */
+    internal fun message(text: String) {
+        _messages.tryEmit(text)
+    }
+
     fun toggle(login: String, userId: String?, name: String, avatar: String?) {
         val on = !isFollowing(Library.data.value, login)
         Library.update { d ->

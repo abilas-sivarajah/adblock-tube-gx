@@ -31,9 +31,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -72,6 +75,7 @@ import de.abilas.gxtube.data.VideoItem
 import de.abilas.gxtube.twitch.TwitchAccount
 import de.abilas.gxtube.twitch.TwitchApi
 import de.abilas.gxtube.twitch.TwitchChannel
+import de.abilas.gxtube.twitch.TwitchFavorites
 import de.abilas.gxtube.twitch.TwitchFollows
 import de.abilas.gxtube.twitch.TwitchGame
 import de.abilas.gxtube.ui.LocalNav
@@ -219,6 +223,61 @@ fun FollowButton(login: String, userId: String?, name: String, avatar: String?, 
     }
 }
 
+/** Gold für den Favoriten-Stern */
+val FavoriteGold = Color(0xFFF5C518)
+
+/** Stern-Knopf: Kanal als Favorit markieren (nur auf dem Handy). */
+@Composable
+fun FavoriteButton(login: String, userId: String?, name: String, avatar: String?, modifier: Modifier = Modifier) {
+    val lib by Library.data.collectAsStateWithLifecycle()
+    val on = TwitchFavorites.isFavorite(lib, login)
+    Box(
+        modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(Yt.colors.chip)
+            .clickable(onClickLabel = if (on) "Aus Favoriten entfernen" else "Als Favorit markieren") {
+                TwitchFavorites.toggle(login, userId, name, avatar)
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            if (on) Icons.Filled.Star else Icons.Outlined.StarBorder,
+            contentDescription = if (on) "Favorit" else "Als Favorit markieren",
+            tint = if (on) FavoriteGold else Yt.colors.text,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+/** Kleiner runder Kanal (Bild + Name) für offline Favoriten in einer Reihe. */
+@Composable
+private fun FavoriteChip(c: TwitchChannel, onClick: () -> Unit) {
+    Column(
+        Modifier
+            .width(76.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Avatar(c.avatar, c.name, 56.dp, if (c.live != null) Modifier.border(2.dp, Color(0xFFEB0400), CircleShape) else Modifier)
+        Spacer(Modifier.height(4.dp))
+        Text(c.name, color = Yt.colors.textSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun FavoritesHeader(liveCount: Int, total: Int) {
+    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Filled.Star, null, tint = FavoriteGold, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(6.dp))
+        Text("Deine Favoriten", color = Yt.colors.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.width(8.dp))
+        Text(if (liveCount > 0) "$liveCount von $total live" else "Gerade ist keiner live", color = Yt.colors.textSecondary, fontSize = 13.sp)
+    }
+}
+
 @Composable
 fun TwitchChannelRow(c: TwitchChannel, onClick: () -> Unit) {
     Row(
@@ -248,6 +307,8 @@ fun TwitchChannelRow(c: TwitchChannel, onClick: () -> Unit) {
             if (live != null && live.title.isNotBlank()) Text(live.title, color = Yt.colors.textSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(8.dp))
+        FavoriteButton(c.login, c.userId, c.name, c.avatar)
+        Spacer(Modifier.width(6.dp))
         FollowButton(c.login, c.userId, c.name, c.avatar)
     }
 }
@@ -303,6 +364,9 @@ class TwitchHomeViewModel : ViewModel() {
         private set
     var followedLive by mutableStateOf<List<VideoItem>>(emptyList())
         private set
+    /** Favoriten mit Live-Status (live zuerst) */
+    var favorites by mutableStateOf<List<TwitchChannel>>(emptyList())
+        private set
     val streams = TwitchList(viewModelScope)
 
     init {
@@ -322,6 +386,13 @@ class TwitchHomeViewModel : ViewModel() {
         )
         viewModelScope.launch {
             runCatching { TwitchFollows.withLiveStatus() }.onSuccess { list -> followedLive = list.mapNotNull { it.live } }
+        }
+        refreshFavorites()
+    }
+
+    fun refreshFavorites() {
+        viewModelScope.launch {
+            runCatching { TwitchFavorites.withLiveStatus() }.onSuccess { favorites = it }
         }
     }
 
@@ -346,8 +417,18 @@ fun TwitchHomeScreen(vm: TwitchHomeViewModel = viewModel()) {
     val lib by Library.data.collectAsStateWithLifecycle()
     // Gefolgte aus dem Konto kommen nach dem Anmelden dazu
     LaunchedEffect(lib.twitchFollows.size) { if (lib.twitchFollows.isNotEmpty()) vm.refreshFollowed() }
+    LaunchedEffect(lib.twitchFavorites.size) { vm.refreshFavorites() }
     LoadMoreEffect(listState, enabled = vm.streams.next != null) { vm.streams.loadMore() }
+    val favLogins = lib.twitchFavorites.map { it.login }.toSet()
+    // Nur Favoriten zeigen, die noch einen Stern haben (Liste lädt kurz nach)
+    val favs = vm.favorites.filter { it.login in favLogins }
     LaunchedEffect(vm.language) { listState.scrollToItem(0) }
+    // Favoriten und gefolgte Live-Kanäle laden nach den Kategorien. Die Liste hält ihre Position am
+    // ersten sichtbaren Eintrag fest – die neuen Reihen kämen sonst unsichtbar oberhalb dazu
+    val topRows = favs.isNotEmpty() to vm.followedLive.isNotEmpty()
+    LaunchedEffect(topRows) {
+        if ((topRows.first || topRows.second) && listState.firstVisibleItemIndex <= 2) listState.scrollToItem(0)
+    }
 
     CollapsingHeaderLayout(
         headerHeight = 100.dp,
@@ -362,9 +443,23 @@ fun TwitchHomeScreen(vm: TwitchHomeViewModel = viewModel()) {
                 contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = 80.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
-                if (vm.followedLive.isNotEmpty()) {
+                if (favs.isNotEmpty()) {
+                    val favLive = favs.mapNotNull { it.live }
+                    item(key = "fav-head") { FavoritesHeader(favLive.size, favs.size) }
+                    items(favLive, key = { "fav-" + it.id }) { v -> VideoCard(v, onClick = { nav.openVideo(v) }) }
+                    val offline = favs.filter { it.live == null }
+                    if (offline.isNotEmpty()) item(key = "fav-offline") {
+                        LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            items(offline, key = { "favo-" + it.login }) { c -> FavoriteChip(c) { nav.openTwitchChannel(c.login) } }
+                        }
+                    }
+                    item(key = "fav-div") { HorizontalDivider(color = Yt.colors.divider, thickness = 4.dp) }
+                }
+                // Favoriten stehen schon oben
+                val followedLive = vm.followedLive.filter { it.twitchLogin !in favLogins }
+                if (followedLive.isNotEmpty()) {
                     item(key = "followed-head") { SectionHeader("Live – Kanäle, denen du folgst") }
-                    items(vm.followedLive, key = { "f-" + it.id }) { v -> VideoCard(v, onClick = { nav.openVideo(v) }) }
+                    items(followedLive, key = { "f-" + it.id }) { v -> VideoCard(v, onClick = { nav.openVideo(v) }) }
                     item(key = "followed-div") { HorizontalDivider(color = Yt.colors.divider, thickness = 4.dp) }
                 }
                 if (vm.games.isNotEmpty()) {
@@ -394,6 +489,10 @@ fun TwitchHomeScreen(vm: TwitchHomeViewModel = viewModel()) {
 class TwitchFollowingViewModel : ViewModel() {
     var channels by mutableStateOf<List<TwitchChannel>>(emptyList())
         private set
+    var favorites by mutableStateOf<List<TwitchChannel>>(emptyList())
+        private set
+    /** Umschalter oben: alle oder nur Favoriten */
+    var onlyFavorites by mutableStateOf(false)
     var loading by mutableStateOf(false)
         private set
     var error by mutableStateOf<String?>(null)
@@ -413,6 +512,13 @@ class TwitchFollowingViewModel : ViewModel() {
                 .onFailure { error = errorText(it) }
             loading = false
         }
+        loadFavorites()
+    }
+
+    fun loadFavorites() {
+        viewModelScope.launch {
+            runCatching { TwitchFavorites.withLiveStatus() }.onSuccess { favorites = it }
+        }
     }
 }
 
@@ -424,8 +530,12 @@ fun TwitchFollowingScreen(vm: TwitchFollowingViewModel = viewModel()) {
     val sync by TwitchFollows.sync.collectAsStateWithLifecycle()
     // Neu gefolgt oder entfolgt (oder aus dem Konto übernommen): Liste auffrischen
     LaunchedEffect(lib.twitchFollows.size) { vm.load() }
-    val follows = lib.twitchFollows.map { it.login }.toSet()
-    val shown = vm.channels.filter { it.login in follows }
+    LaunchedEffect(lib.twitchFavorites.size) { vm.loadFavorites() }
+    val favLogins = lib.twitchFavorites.map { it.login }.toSet()
+    val favs = vm.favorites.filter { it.login in favLogins }
+    // Favoriten stehen in ihrer eigenen Rubrik – nicht doppelt bei den gefolgten
+    val follows = lib.twitchFollows.map { it.login }.toSet() - favLogins
+    val shown = if (vm.onlyFavorites) emptyList() else vm.channels.filter { it.login in follows }
 
     Column(
         Modifier
@@ -433,7 +543,24 @@ fun TwitchFollowingScreen(vm: TwitchFollowingViewModel = viewModel()) {
             .statusBarsPadding(),
     ) {
         AppTopBar()
+        // Umschalter wie die Filter im Abo-Feed: alle oder nur Favoriten
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = !vm.onlyFavorites, onClick = { vm.onlyFavorites = false }, label = { Text("Alle") })
+            FilterChip(
+                selected = vm.onlyFavorites,
+                onClick = { vm.onlyFavorites = true },
+                label = { Text("Favoriten") },
+                leadingIcon = { Icon(Icons.Filled.Star, null, tint = FavoriteGold, modifier = Modifier.size(18.dp)) },
+            )
+        }
         when {
+            vm.onlyFavorites && lib.twitchFavorites.isEmpty() -> EmptyBox(
+                Icons.Outlined.StarBorder,
+                "Noch keine Favoriten",
+                "Tippe bei einem Kanal auf den Stern – dann steht er hier und auf der Twitch-Startseite ganz oben.",
+            ) {}
+            vm.onlyFavorites -> Unit // Liste unten zeigt nur die Favoriten
+            lib.twitchFavorites.isNotEmpty() && lib.twitchFollows.isEmpty() -> Unit // Liste unten zeigt die Favoriten
             lib.twitchFollows.isEmpty() && sync.running -> Column(Modifier.fillMaxWidth().padding(top = 60.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 LoadingBox()
                 Text("Deine gefolgten Kanäle werden von Twitch geholt …", color = Yt.colors.textSecondary, fontSize = 14.sp)
@@ -453,9 +580,15 @@ fun TwitchFollowingScreen(vm: TwitchFollowingViewModel = viewModel()) {
                 if (account == null || account?.expired == true) PrimaryPill("Bei Twitch anmelden", onClick = { nav.openTwitchLogin() })
                 else PrimaryPill("Von Twitch neu laden", onClick = { TwitchFollows.syncFromAccount() })
             }
-            shown.isEmpty() && vm.loading -> LoadingBox(Modifier.padding(top = 80.dp))
-            shown.isEmpty() && vm.error != null -> ErrorBox(vm.error.orEmpty(), onRetry = { vm.load() })
-            else -> PullToRefreshBox(
+            shown.isEmpty() && favs.isEmpty() && vm.loading -> LoadingBox(Modifier.padding(top = 80.dp))
+            shown.isEmpty() && favs.isEmpty() && vm.error != null -> ErrorBox(vm.error.orEmpty(), onRetry = { vm.load() })
+            else -> Unit
+        }
+        val showList = !(vm.onlyFavorites && lib.twitchFavorites.isEmpty()) &&
+            (lib.twitchFavorites.isNotEmpty() || lib.twitchFollows.isNotEmpty()) &&
+            !(shown.isEmpty() && favs.isEmpty() && (vm.loading || vm.error != null))
+        if (showList) {
+            PullToRefreshBox(
                 isRefreshing = vm.loading,
                 onRefresh = {
                     TwitchFollows.syncFromAccount()
@@ -464,6 +597,13 @@ fun TwitchFollowingScreen(vm: TwitchFollowingViewModel = viewModel()) {
                 modifier = Modifier.fillMaxSize(),
             ) {
                 LazyColumn(contentPadding = PaddingValues(bottom = 80.dp), modifier = Modifier.fillMaxSize()) {
+                    if (favs.isNotEmpty()) {
+                        val favLive = favs.mapNotNull { it.live }
+                        item(key = "fav-head") { FavoritesHeader(favLive.size, favs.size) }
+                        items(favLive, key = { "fl-" + it.id }) { v -> VideoCard(v, onClick = { nav.openVideo(v) }) }
+                        items(favs.filter { it.live == null }, key = { "fo-" + it.login }) { c -> TwitchChannelRow(c) { nav.openTwitchChannel(c.login) } }
+                        if (shown.isNotEmpty()) item(key = "fav-div") { HorizontalDivider(color = Yt.colors.divider, thickness = 4.dp) }
+                    }
                     val live = shown.mapNotNull { it.live }
                     if (live.isNotEmpty()) {
                         item(key = "live-head") { SectionHeader("Jetzt live") }
@@ -763,7 +903,11 @@ fun TwitchChannelScreen(login: String) {
                         Text(c?.description.orEmpty(), color = Yt.colors.textSecondary, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(Modifier.height(12.dp))
-                    FollowButton(login, c?.userId, c?.name ?: login, c?.avatar)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        FollowButton(login, c?.userId, c?.name ?: login, c?.avatar)
+                        Spacer(Modifier.width(8.dp))
+                        FavoriteButton(login, c?.userId, c?.name ?: login, c?.avatar)
+                    }
                 }
             }
             c?.live?.let { live ->
