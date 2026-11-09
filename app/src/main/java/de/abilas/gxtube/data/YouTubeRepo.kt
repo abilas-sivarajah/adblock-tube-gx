@@ -156,8 +156,39 @@ object YouTubeRepo {
 
     // ---------------------------------------------------------------- Kanal
 
+    /** Aufgelöste Kanal-Adressen von Videos (Video-ID → Kanal-URL). */
+    private val channelOfVideo = ConcurrentHashMap<String, String>()
+
+    /**
+     * Kanal-Adresse aus einer Adresse, die auch ein Video sein kann: Bei Live-Streams verlinkt YouTube das
+     * Profilbild (mit rotem Live-Ring) auf den Stream statt auf den Kanal – NewPipe übernimmt das als
+     * Kanal-Adresse, und die Kanalseite scheiterte mit "URL not accepted". Dann über oEmbed (eine kleine
+     * Anfrage, keine Player-Anfrage) den Kanal holen, notfalls über die Video-Infos.
+     */
+    fun resolveChannelUrl(url: String): String {
+        if (CHANNEL_URL.containsMatchIn(url)) return url
+        val videoId = videoIdOf(url) ?: return url
+        channelOfVideo[videoId]?.let { return it }
+        val oembed = runCatching {
+            val request = okhttp3.Request.Builder()
+                .url("https://www.youtube.com/oembed?format=json&url=" + java.net.URLEncoder.encode("https://www.youtube.com/watch?v=$videoId", "UTF-8"))
+                .header("User-Agent", Http.USER_AGENT)
+                .build()
+            Http.client.newCall(request).execute().use { r ->
+                if (!r.isSuccessful) return@use null
+                val json = kotlinx.serialization.json.Json.parseToJsonElement(r.body.string()) as? JsonObject
+                json?.get("author_url")?.jsonPrimitive?.contentOrNull?.takeIf { CHANNEL_URL.containsMatchIn(it) }
+            }
+        }.getOrNull()
+        val resolved = oembed
+            ?: runCatching { StreamInfo.getInfo(service, "https://www.youtube.com/watch?v=$videoId").uploaderUrl }.getOrNull()
+            ?: throw IOException("Kanal zu diesem Video nicht gefunden")
+        channelOfVideo[videoId] = resolved
+        return resolved
+    }
+
     suspend fun channel(url: String): ChannelPage = io {
-        val info = ChannelInfo.getInfo(service, url)
+        val info = ChannelInfo.getInfo(service, resolveChannelUrl(url))
         val ref = ChannelRef(
             url = info.url,
             name = info.name.orEmpty(),
@@ -188,6 +219,9 @@ object YouTubeRepo {
         }
     }
 
+    /** Echte Kanal-Adressen (Kanal-ID, @Name, /c/, /user/) – im Gegensatz zu Video-Adressen. */
+    private val CHANNEL_URL = Regex("youtube\\.com/(channel/UC|@|c/|user/)")
+
     /** Gemerkte Tabs der Kanäle (Kanal|Tab → Handler): ein Tab braucht dann keine Kanalseite mehr vorab. */
     private val tabHandlers = ConcurrentHashMap<String, ListLinkHandler>()
 
@@ -195,7 +229,8 @@ object YouTubeRepo {
      * Handler für einen Tab eines Kanals. Zuerst direkt aus der Kanal-ID gebaut (keine zusätzliche Anfrage);
      * nur wenn das nicht geht, über die Kanalseite (und die Tabs gemerkt).
      */
-    private fun channelTabHandler(channelUrl: String, tab: String): ListLinkHandler? {
+    private fun channelTabHandler(url: String, tab: String): ListLinkHandler? {
+        val channelUrl = resolveChannelUrl(url)
         val key = "$channelUrl|$tab"
         tabHandlers[key]?.let { return it }
         runCatching {
@@ -222,7 +257,7 @@ object YouTubeRepo {
     }
 
     suspend fun channelAvatar(url: String): String? = io {
-        ChannelInfo.getInfo(service, url).avatars.bestUrl(400)
+        ChannelInfo.getInfo(service, resolveChannelUrl(url)).avatars.bestUrl(400)
     }
 
     /** Neueste Videos eines Kanals über den RSS-Feed – schnell, ideal für den Abo-Feed. */

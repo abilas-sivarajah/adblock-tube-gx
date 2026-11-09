@@ -89,6 +89,17 @@ class OnlineSmokeTest {
             val v = runBlocking { YouTubeRepo.channelVideos("https://www.youtube.com/channel/UCLA_DiR1FfKNvjuUpBHmylQ") }
             "${v.size} Videos, neuestes: ${v.firstOrNull()?.title}"
         }
+        // Live-Streams: YouTube verlinkt das Profilbild auf den Stream – Kanal muss trotzdem aufgehen
+        report("Kanal eines Live-Streams") {
+            val live = runBlocking { YouTubeRepo.kiosk(Kiosk.LIVE) }.items.firstOrNull { it.isLive }
+                ?: return@report "kein Live-Stream gefunden"
+            val ch = runBlocking { YouTubeRepo.channel(live.channelUrl ?: live.url) }
+            "Video-Link als Kanal: ${live.channelUrl?.contains("watch")}, Kanal: ${ch.ref.name} (${ch.ref.url})"
+        }
+        report("Kanal aus Video-Link (Live-Profilbild)") {
+            val ch = runBlocking { YouTubeRepo.channel("https://www.youtube.com/watch?v=mpSLrM1SwME&pp=uAQw0gcJCWQBLa19xc3H") }
+            "${ch.ref.name} (${ch.ref.url}), Tabs ${ch.tabs.map { it.label }}"
+        }
         report("Kanal-Shorts") {
             val v = runBlocking { YouTubeRepo.channelShorts("https://www.youtube.com/channel/UCLA_DiR1FfKNvjuUpBHmylQ") }
             "${v.size} Shorts"
