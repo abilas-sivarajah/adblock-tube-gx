@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.abilas.gxtube.BuildConfig
 import de.abilas.gxtube.GxTubeApp
+import de.abilas.gxtube.data.DeArrow
 import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.data.Quality
 import de.abilas.gxtube.data.SponsorBlock
@@ -56,6 +57,8 @@ private val countries = linkedMapOf(
 private val languages = linkedMapOf("de" to "Deutsch", "en" to "English", "ta" to "தமிழ் (Tamil)", "tr" to "Türkçe")
 private val themes = linkedMapOf("system" to "Wie das System", "dark" to "Dunkel", "light" to "Hell")
 private val twitchLanguages = linkedMapOf("de" to "Auf Deutsch", "en" to "Auf Englisch", "" to "Alle Sprachen")
+
+private val captionLanguages = linkedMapOf("de" to "Deutsch", "en" to "Englisch", "" to "Erste verfügbare")
 
 @Composable
 fun SettingsScreen() {
@@ -85,6 +88,14 @@ fun SettingsScreen() {
                     Library.updateSettings { st -> st.copy(autoplay = it) }
                 }
             }
+            item {
+                SwitchRow("Untertitel automatisch", "Untertitel gleich einschalten, wenn es welche in deiner Sprache gibt – sonst über „CC“ im Player", s.captions) {
+                    Library.updateSettings { st -> st.copy(captions = it) }
+                }
+            }
+            if (s.captions) {
+                item { ChoiceRow("Sprache der Untertitel", captionLanguages[s.captionLang] ?: s.captionLang) { dialog = "captions" } }
+            }
 
             item { Header("Werbung") }
             item {
@@ -104,6 +115,33 @@ fun SettingsScreen() {
             }
             if (s.sponsorBlock) {
                 item { ChoiceRow("Was übersprungen wird", s.sponsorCategories.joinToString(", ") { SponsorBlock.label(it) }) { dialog = "sponsor" } }
+                item {
+                    Text(
+                        "Dazu: Highlight des Videos (Knopf unter dem Video), als „stumm“ markierte Abschnitte werden stumm geschaltet, Kapitel aus SponsorBlock, wenn YouTube keine hat. Nach dem Überspringen holt „Rückgängig“ den Abschnitt zurück.",
+                        fontSize = 13.sp,
+                        color = Yt.colors.textSecondary,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+            }
+
+            item { Header("Community") }
+            item {
+                SwitchRow(
+                    "DeArrow",
+                    "Titel und Vorschaubilder ohne Clickbait (DeArrow-Community). Titel kommen anonym über einen Teil des Hashs der Video-ID; eigene Vorschaubilder lädt der DeArrow-Server",
+                    s.dearrow,
+                ) {
+                    if (!it) DeArrow.clear()
+                    Library.updateSettings { st -> st.copy(dearrow = it) }
+                }
+            }
+            item {
+                SwitchRow(
+                    "Dislikes anzeigen",
+                    "Daumen nach unten unter dem Video (Schätzung von Return YouTube Dislike – die Video-ID geht dafür an returnyoutubedislikeapi.com)",
+                    s.returnDislike,
+                ) { Library.updateSettings { st -> st.copy(returnDislike = it) } }
             }
 
             item { Header("Twitch") }
@@ -229,6 +267,9 @@ fun SettingsScreen() {
             Library.updateSettings { it.copy(theme = v) }
         }
         "sponsor" -> SponsorDialog(s.sponsorCategories) { dialog = null }
+        "captions" -> RadioDialog("Sprache der Untertitel", captionLanguages, s.captionLang, { dialog = null }) { v ->
+            Library.updateSettings { it.copy(captionLang = v) }
+        }
         "twitch-language" -> RadioDialog("Beliebte Twitch-Streams", twitchLanguages, s.twitchLanguage, { dialog = null }) { v ->
             Library.updateSettings { it.copy(twitchLanguage = v) }
         }

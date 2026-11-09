@@ -185,6 +185,8 @@ data class RemoteSegment(
     val category: String = "",
     val label: String = "",
     val uuid: String = "",
+    /** "skip" oder "mute" (stumm geschaltet statt übersprungen) – ältere PCs schicken nichts */
+    val action: String = "skip",
 )
 
 @Serializable

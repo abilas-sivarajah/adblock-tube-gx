@@ -35,13 +35,14 @@ Voraussetzung: Android 8.0 oder neuer.
 | | |
 |---|---|
 | **Keine Werbung** | Keine Videowerbung, keine Banner, keine „Werbeblocker“-Hinweise |
-| **SponsorBlock** | Gesponserte Abschnitte *im* Video („Dieses Video wird präsentiert von …“) werden automatisch übersprungen, auf dem Fortschrittsbalken grün markiert. Kategorien einstellbar. |
+| **SponsorBlock** | Gesponserte Abschnitte *im* Video („Dieses Video wird präsentiert von …“) werden punktgenau übersprungen, auf dem Fortschrittsbalken grün markiert – mit **„Rückgängig“** im Hinweis. Als „stumm“ markierte Abschnitte werden stumm geschaltet (gelb), dazu **Highlight** (◆ und Knopf „Highlight“), Hinweis „Gesponsertes Video“ und Kapitel aus SponsorBlock, wenn YouTube keine hat. Kategorien einstellbar. |
 | **Hintergrundwiedergabe** | Ton läuft weiter bei gesperrtem Bildschirm oder in anderen Apps, mit Steuerung in Benachrichtigung und Sperrbildschirm (bei YouTube nur mit Premium) |
 | **Bild-im-Bild** | Video läuft im kleinen Fenster weiter, wenn du zum Startbildschirm wechselst |
 | **Startseite** | Mischung aus Videos ähnlich zu dem, was du geschaut hast, neuen Videos deiner Abos und Trends. Kategorien: Musik, Gaming, Live, Filme & Trailer, Podcasts. Shorts-Leiste. |
 | **Shorts** | Vollbild zum Hochwischen, Endlosschleife, Mag ich, Kommentare, Teilen, Abonnieren – oder in den Einstellungen **komplett ausschalten** (Tab, Startseite, Abos, Suche, Kanäle, ähnliche Videos) |
 | **Abos** | Kanäle abonnieren, Abo-Feed mit „Heute“, „Diese Woche“, „Nicht angesehen“. **Import aus Google Takeout** (ZIP/CSV) und NewPipe, Export als JSON |
-| **Video-Seite** | Mini-Player (nach unten wischen), Vollbild beim Drehen, Doppeltippen ±10 s, Qualität (bis 4K), Geschwindigkeit, Wiederholen, Beschreibung mit klickbaren Zeitstempeln, Kommentare mit Antworten, ähnliche Videos, Autoplay |
+| **Video-Seite** | Mini-Player (nach unten wischen), Vollbild beim Drehen, Doppeltippen ±10 s, Qualität **automatisch** (passt sich der Leitung an) oder fest bis 4K, Geschwindigkeit, Wiederholen, **Untertitel** (CC, auf Wunsch automatisch in deiner Sprache), **Kapitel** (Kacheln unter dem Video, Lücken im Balken, Name neben der Zeit), **Vorschaubilder** beim Spulen, Beschreibung mit klickbaren Zeitstempeln, Kommentare mit Antworten, ähnliche Videos, Autoplay |
+| **Community (freiwillig)** | **DeArrow**: Titel und Vorschaubilder ohne Clickbait. **Dislikes anzeigen** (Return YouTube Dislike). Beide unter Einstellungen → Community, standardmäßig aus |
 | **Suche** | Vorschläge, Suchverlauf, Filter (Videos, Kanäle, Playlists), „Meintest du …“ |
 | **Kanäle & Playlists** | Banner, Abonnieren, Tabs (Videos, Shorts, Live, Playlists), „Alle abspielen“, Zufallsmix |
 | **Du** | Verlauf mit rotem Fortschrittsbalken („Weiter ansehen“), Später ansehen, Videos mit „Mag ich“ |
@@ -141,10 +142,12 @@ bedeutet einmal deinstallieren (vorher Abos exportieren).
 |---|---|
 | Oberfläche | Kotlin, Jetpack Compose, Material 3 (eigenes YouTube-Farbschema) |
 | YouTube-Daten | NewPipe Extractor (Startseite, Suche, Videos, Kanäle, Kommentare, RSS-Feeds der Abos) |
-| Player | Media3 ExoPlayer: Video- und Tonspur getrennt als DASH (aus NewPipe übernommen), zusammengeführt; Live-Streams per HLS |
+| Player | Media3 ExoPlayer: Video- und Tonspur getrennt als DASH (aus NewPipe übernommen). Automatische Qualität: alle Videospuren eines Codecs bis zur eingestellten Höhe in einem Manifest, ExoPlayer wählt nach Leitung. Untertitel (TTML/WebVTT) werden beim Laden zerlegt und selbst gezeichnet; Live-Streams per HLS |
 | Hintergrund | Media3 `MediaSessionService` (Benachrichtigung, Sperrbildschirm, Kopfhörer-Tasten); im Hintergrund wird nur der Ton geladen |
 | Bilder | Coil 3 |
-| Werbung im Video | SponsorBlock-API (Abfrage über Hash-Präfix, die Video-ID bleibt privat) |
+| Werbung im Video | SponsorBlock-API (Abfrage über Hash-Präfix, die Video-ID bleibt privat), parallel zum Stream geladen; Überspringen über Player-Nachrichten genau am Abschnittsanfang |
+| Abos | RSS-Feeds der Kanäle; fallen sie aus, höchstens 25 Kanäle pro Aktualisierung über ihren Videos-Tab |
+| Community | DeArrow (Titel über Hash-Präfix, Vorschaubilder vom DeArrow-Server) und Return YouTube Dislike – nur wenn eingeschaltet |
 | Twitch | GraphQL-Abfragen wie twitch.tv (ohne Konto mit der Kennung der Fernseher-App), HLS über `usher.ttvnw.net`. Werbeblocker `twitch/TwitchAdBlock.kt`: Kotlin-Fassung von `twitch_worker.js` aus AdBlock GX (Techniken nach [TTV-AB](https://github.com/GosuDRM/TTV-AB), MIT) – eine ExoPlayer-Datenquelle schreibt die Playlists um. Chat über IRC-WebSocket, Anmeldung per OAuth-Geräteanmeldung (twitch.tv/activate) |
 
 ## 📁 Projektstruktur
@@ -157,7 +160,8 @@ app/src/main/java/de/abilas/gxtube/
 │   ├── Feeds.kt                     # Abo-Feed, Startseiten-Mix, Shorts
 │   ├── Library.kt                   # Abos, Verlauf, Später ansehen, Likes, Einstellungen (lokal)
 │   ├── Account.kt / Sync.kt         # freiwillige Google-Anmeldung, Abgleich mit dem Konto
-│   ├── SponsorBlock.kt              # gesponserte Abschnitte
+│   ├── SponsorBlock.kt              # Überspringen, Stummschalten, Highlight, Kapitel
+│   ├── Community.kt                 # DeArrow, Return YouTube Dislike (freiwillig)
 │   ├── Http.kt / Models.kt
 ├── twitch/                          # Twitch: Abfragen, Werbeblocker (ExoPlayer-Datenquelle), Chat, Konto, Folgen
 ├── cast/                            # Auf den PC streamen (GX Tube Desktop)
@@ -167,13 +171,13 @@ app/src/main/java/de/abilas/gxtube/
 │   └── CastPlayer.kt                # Benachrichtigung/Sperrbildschirm + Lautstärketasten steuern den PC
 ├── player/
 │   ├── PlayerController.kt          # ein Player für alles: Laden, Qualität, Autoplay, Fortschritt, Streamen
-│   ├── StreamResolver.kt            # Streams → ExoPlayer-Quelle (DASH, Video+Audio zusammenführen)
+│   ├── StreamResolver.kt            # Streams → ExoPlayer-Quelle (DASH, automatische Qualität, Untertitel)
 │   ├── YoutubeHttpDataSource.java   # aus NewPipe: passende Header/Parameter für YouTube-Streams
 │   └── PlaybackService.kt           # Hintergrundwiedergabe + Benachrichtigung
 └── ui/
     ├── App.kt                       # Navigation, untere Leiste
     ├── screens/                     # Startseite, Shorts, Abos, Du, Suche, Kanal, Playlist, Einstellungen
-    ├── watch/                       # Video-Seite, Mini-Player, Bedienelemente, Kommentare
+    ├── watch/                       # Video-Seite, Mini-Player, Bedienelemente, Kommentare, Spul-Vorschau
     ├── twitch/                      # Twitch-Startseite, Folge ich, Suche, Kategorie, Kanal, Chat, Anmeldung
     ├── cast/                        # Streamen-Symbol, Geräteauswahl, Anzeige "Wird auf … abgespielt"
     └── components/                  # Video-Karten, Chips, Knöpfe …

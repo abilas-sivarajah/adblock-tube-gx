@@ -29,8 +29,10 @@ import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -66,7 +68,9 @@ import de.abilas.gxtube.player.PlayerMode
 import de.abilas.gxtube.ui.cast.CastLaunch
 import de.abilas.gxtube.ui.cast.CastSheet
 import de.abilas.gxtube.ui.cast.CastVolumeHint
+import de.abilas.gxtube.ui.components.LocalBranding
 import de.abilas.gxtube.ui.components.LocalWatchProgress
+import de.abilas.gxtube.data.DeArrow
 import de.abilas.gxtube.ui.screens.ChannelScreen
 import de.abilas.gxtube.ui.screens.HomeScreen
 import de.abilas.gxtube.ui.screens.LibraryScreen
@@ -130,6 +134,15 @@ fun AppRoot(inPip: Boolean) {
             PlayerController.messages.collect { snackbar.showSnackbar(it) }
         }
         LaunchedEffect(Unit) {
+            // "Sponsor übersprungen – Rückgängig"
+            PlayerController.actions.collect { a ->
+                val r = snackbar.showSnackbar(a.text, actionLabel = a.action, duration = SnackbarDuration.Short)
+                if (r == SnackbarResult.ActionPerformed) a.run()
+            }
+        }
+        // DeArrow: Titel/Vorschaubilder für alle Kacheln (nur wenn eingeschaltet)
+        val branding by DeArrow.branding.collectAsStateWithLifecycle()
+        LaunchedEffect(Unit) {
             Sync.messages.collect { snackbar.showSnackbar(it) }
         }
         LaunchedEffect(Unit) {
@@ -167,7 +180,11 @@ fun AppRoot(inPip: Boolean) {
             }
         }
 
-        CompositionLocalProvider(LocalNav provides nav, LocalWatchProgress provides progress) {
+        CompositionLocalProvider(
+            LocalNav provides nav,
+            LocalWatchProgress provides progress,
+            LocalBranding provides if (lib.settings.dearrow) branding else null,
+        ) {
             Box(
                 Modifier
                     .fillMaxSize()

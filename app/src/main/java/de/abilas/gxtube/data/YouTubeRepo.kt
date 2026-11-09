@@ -35,6 +35,7 @@ import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.util.concurrent.ConcurrentHashMap
 
 /** Eine Liste, die beim Scrollen weitere Seiten nachlädt. */
 class Paged<T>(val items: List<T>, val loadMore: (suspend () -> Paged<T>)?)
@@ -187,13 +188,37 @@ object YouTubeRepo {
         }
     }
 
-    /** Die Shorts eines Kanals (für den Shorts-Tab). */
-    suspend fun channelShorts(channelUrl: String): List<VideoItem> = io {
+    /** Gemerkte Tabs der Kanäle (Kanal|Tab → Handler): ein Tab braucht dann keine Kanalseite mehr vorab. */
+    private val tabHandlers = ConcurrentHashMap<String, ListLinkHandler>()
+
+    /**
+     * Handler für einen Tab eines Kanals. Zuerst direkt aus der Kanal-ID gebaut (keine zusätzliche Anfrage);
+     * nur wenn das nicht geht, über die Kanalseite (und die Tabs gemerkt).
+     */
+    private fun channelTabHandler(channelUrl: String, tab: String): ListLinkHandler? {
+        val key = "$channelUrl|$tab"
+        tabHandlers[key]?.let { return it }
+        runCatching {
+            val id = service.channelLHFactory.fromUrl(channelUrl).id
+            service.channelTabLHFactory.fromQuery(id, listOf(tab), "")
+        }.getOrNull()?.let { return it.also { h -> tabHandlers[key] = h } }
         val info = ChannelInfo.getInfo(service, channelUrl)
-        val handler = info.tabs.firstOrNull { it.contentFilters.contains(ChannelTabs.SHORTS) }
-            ?: return@io emptyList()
+        info.tabs.forEach { h -> h.contentFilters.firstOrNull()?.let { tabHandlers["$channelUrl|$it"] = h } }
+        return tabHandlers[key]
+    }
+
+    /** Die Shorts eines Kanals (für den Shorts-Tab) – eine Anfrage statt zwei (Kanalseite + Tab). */
+    suspend fun channelShorts(channelUrl: String): List<VideoItem> = io {
+        val handler = channelTabHandler(channelUrl, ChannelTabs.SHORTS) ?: return@io emptyList()
         ChannelTabInfo.getInfo(service, handler).relatedItems
             .mapNotNull { (it as? StreamInfoItem)?.toVideoItem()?.copy(isShort = true) }
+    }
+
+    /** Neueste Videos eines Kanals über den Videos-Tab – Ersatz, wenn die RSS-Feeds ausfallen. */
+    suspend fun channelVideos(channelUrl: String): List<VideoItem> = io {
+        val handler = channelTabHandler(channelUrl, ChannelTabs.VIDEOS) ?: return@io emptyList()
+        ChannelTabInfo.getInfo(service, handler).relatedItems
+            .mapNotNull { (it as? StreamInfoItem)?.toVideoItem() }
     }
 
     suspend fun channelAvatar(url: String): String? = io {

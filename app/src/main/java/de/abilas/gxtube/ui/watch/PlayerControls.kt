@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -33,6 +34,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.outlined.ClosedCaptionOff
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.HighQuality
 import androidx.compose.material.icons.outlined.Loop
 import androidx.compose.material.icons.outlined.Settings
@@ -66,10 +69,19 @@ import androidx.media3.common.Player
 import de.abilas.gxtube.cast.Cast
 import de.abilas.gxtube.player.NowPlaying
 import de.abilas.gxtube.player.PlayerController
+import de.abilas.gxtube.player.StreamResolver
 import de.abilas.gxtube.ui.cast.CastButton
 import de.abilas.gxtube.ui.theme.Yt
 import de.abilas.gxtube.util.Fmt
 import kotlinx.coroutines.delay
+
+/** Untertitel in der eingestellten Sprache (von Hand erstellte zuerst), sonst die ersten von Hand erstellten. */
+private fun preferredCaption(tracks: List<StreamResolver.CaptionTrack>): StreamResolver.CaptionTrack? {
+    val lang = de.abilas.gxtube.data.Library.settings.captionLang
+    fun match(t: StreamResolver.CaptionTrack) = lang.isNotBlank() && (t.lang.equals(lang, true) || t.lang.startsWith("$lang-", true))
+    return tracks.firstOrNull { match(it) && !it.auto } ?: tracks.firstOrNull { match(it) }
+        ?: tracks.firstOrNull { !it.auto } ?: tracks.firstOrNull()
+}
 
 /** Bedienelemente über dem Video – Aufbau wie in der YouTube-App. */
 @Composable
@@ -89,6 +101,8 @@ fun PlayerControls(
     var seekFeedback by remember { mutableStateOf<Pair<Int, Int>?>(null) } // Richtung, Zähler
     var showSettings by remember { mutableStateOf(false) }
     val ended = ps.state == Player.STATE_ENDED
+    val chapters = remember(now.info, now.sponsor) { now.chapters }
+    val frames = remember(now.info) { bestFrameset(now.info?.previewFrames) }
     // Beim Streamen: Fehler und Laden kommen vom PC, die Bedienung bleibt immer sichtbar (wie bei YouTube)
     val error = if (remote) remoteState?.error else now.error
     val loading = if (remote) remoteState?.status == "loading" else now.loading
@@ -103,6 +117,10 @@ fun PlayerControls(
             visible = false
         }
     }
+    // Untertitel weichen der Bedienleiste aus (wie bei YouTube)
+    val shown = visible || ended || error != null
+    LaunchedEffect(shown) { PlayerController.controlsShown.value = shown }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { PlayerController.controlsShown.value = false } }
     LaunchedEffect(seekFeedback) {
         if (seekFeedback != null) {
             delay(700)
@@ -181,6 +199,19 @@ fun PlayerControls(
                         Spacer(Modifier.weight(1f))
                     }
                     CastButton(tint = Color.White)
+                    if (!remote && now.captions.isNotEmpty()) {
+                        IconButton(onClick = {
+                            // Antippen schaltet um: aus – oder die passendsten Untertitel ein
+                            PlayerController.setCaption(if (now.caption != null) null else preferredCaption(now.captions))
+                            interaction++
+                        }) {
+                            Icon(
+                                if (now.caption != null) Icons.Filled.ClosedCaption else Icons.Outlined.ClosedCaptionOff,
+                                if (now.caption != null) "Untertitel aus" else "Untertitel",
+                                tint = Color.White,
+                            )
+                        }
+                    }
                     IconButton(onClick = {
                         showSettings = true
                         interaction++
@@ -246,6 +277,17 @@ fun PlayerControls(
                             color = Color.White.copy(alpha = 0.7f),
                             fontSize = 12.sp,
                         )
+                        val chapter = chapterAt(chapters, scrub ?: ps.position)
+                        if (chapter != null) {
+                            Text(
+                                "  ·  ${chapter.title}",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                        }
                     }
                     Spacer(Modifier.weight(1f))
                     val pcFullscreen = remoteState?.fullscreen
@@ -303,6 +345,20 @@ fun PlayerControls(
             }
         }
 
+        // Vorschau beim Spulen: Bild, Kapitel, Zeit
+        val scrubbing = scrub
+        if (scrubbing != null && !now.isLive && ps.duration > 0) {
+            SeekPreview(
+                frames = frames,
+                chapters = chapters,
+                positionMs = scrubbing,
+                durationMs = ps.duration,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 12.dp, end = 12.dp, bottom = if (fullscreen) 48.dp else 36.dp),
+            )
+        }
+
         // Fortschrittsbalken
         if (!now.isLive && ps.duration > 0) {
             SeekBar(
@@ -310,6 +366,8 @@ fun PlayerControls(
                 duration = ps.duration,
                 buffered = ps.buffered,
                 segments = now.segments,
+                chapters = chapters,
+                highlightMs = now.sponsor?.highlightMs,
                 showThumb = visible,
                 onScrub = {
                     scrub = it
@@ -361,9 +419,21 @@ fun PlayerSettingsSheet(now: NowPlaying, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Yt.colors.card) {
         when (page) {
             "quality" -> LazyColumn(Modifier.padding(bottom = 24.dp)) {
+                if (!now.video.isTwitch && now.options.size > 1) {
+                    item {
+                        SheetRow(
+                            icon = if (now.autoQuality) Icons.Filled.Check else null,
+                            text = "Automatisch",
+                            detail = "passt sich der Leitung an",
+                        ) {
+                            PlayerController.setQuality(0)
+                            onDismiss()
+                        }
+                    }
+                }
                 items(now.options) { opt ->
                     SheetRow(
-                        icon = if (opt.height == now.height) Icons.Filled.Check else null,
+                        icon = if (!now.autoQuality && opt.height == now.height) Icons.Filled.Check else null,
                         text = opt.label,
                     ) {
                         PlayerController.setQuality(opt.height)
@@ -371,6 +441,20 @@ fun PlayerSettingsSheet(now: NowPlaying, onDismiss: () -> Unit) {
                     }
                 }
                 if (now.options.isEmpty()) item { SheetRow(null, "Automatisch (Live)") { onDismiss() } }
+            }
+            "captions" -> LazyColumn(Modifier.padding(bottom = 24.dp)) {
+                item {
+                    SheetRow(icon = if (now.caption == null) Icons.Filled.Check else null, text = "Aus") {
+                        PlayerController.setCaption(null)
+                        onDismiss()
+                    }
+                }
+                items(now.captions) { t ->
+                    SheetRow(icon = if (now.caption?.key == t.key) Icons.Filled.Check else null, text = t.label) {
+                        PlayerController.setCaption(t)
+                        onDismiss()
+                    }
+                }
             }
             "speed" -> LazyColumn(Modifier.padding(bottom = 24.dp)) {
                 items(listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 3f)) { s ->
@@ -396,11 +480,19 @@ fun PlayerSettingsSheet(now: NowPlaying, onDismiss: () -> Unit) {
                     SheetRow(Icons.Outlined.Slideshow, "SponsorBlock", detail = "${now.segments.size} Abschnitte werden am PC übersprungen") {}
                 }
             } else Column(Modifier.padding(bottom = 24.dp)) {
+                val current = now.options.firstOrNull { it.height == now.height }?.label ?: "${now.height}p"
                 SheetRow(
                     Icons.Outlined.HighQuality,
                     "Qualität",
-                    detail = if (now.isLive && !now.video.isTwitch) "Automatisch" else now.options.firstOrNull { it.height == now.height }?.label ?: "${now.height}p",
+                    detail = when {
+                        now.isLive && !now.video.isTwitch -> "Automatisch"
+                        now.autoQuality && !now.video.isTwitch && now.options.size > 1 -> "Automatisch ($current)"
+                        else -> current
+                    },
                 ) { if (!now.isLive || now.video.isTwitch) page = "quality" }
+                if (now.captions.isNotEmpty()) {
+                    SheetRow(Icons.Outlined.ClosedCaptionOff, "Untertitel", detail = now.caption?.label ?: "Aus") { page = "captions" }
+                }
                 SheetRow(Icons.Outlined.Speed, "Wiedergabegeschwindigkeit", detail = if (speed == 1f) "Normal" else "${speed}×".replace('.', ',')) {
                     page = "speed"
                 }
@@ -410,6 +502,12 @@ fun PlayerSettingsSheet(now: NowPlaying, onDismiss: () -> Unit) {
                 }
                 if (now.segments.isNotEmpty()) {
                     SheetRow(Icons.Outlined.Slideshow, "SponsorBlock", detail = "${now.segments.size} Abschnitte werden übersprungen") {}
+                }
+                now.sponsor?.highlightMs?.let { h ->
+                    SheetRow(Icons.Outlined.Flag, "Zum Highlight springen", detail = Fmt.durationMs(h)) {
+                        PlayerController.seekToHighlight()
+                        onDismiss()
+                    }
                 }
             }
         }

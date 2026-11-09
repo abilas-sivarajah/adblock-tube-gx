@@ -42,6 +42,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import de.abilas.gxtube.data.DeArrow
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -85,6 +87,26 @@ import kotlinx.coroutines.flow.filter
 
 /** Wie weit ein Video schon geschaut wurde (0..1) – für den roten Balken unter dem Vorschaubild. */
 val LocalWatchProgress = staticCompositionLocalOf<Map<String, Float>> { emptyMap() }
+
+/** DeArrow-Ergebnisse (null: DeArrow aus). Dynamisch, damit nur die Kacheln neu zeichnen, die es lesen. */
+val LocalBranding = compositionLocalOf<Map<String, DeArrow.Branding?>?> { null }
+
+/** Titel eines Videos – mit DeArrow ohne Clickbait, wenn eingeschaltet und vorhanden. */
+@Composable
+fun brandedTitle(video: VideoItem): String {
+    val map = LocalBranding.current ?: return video.title
+    if (video.isTwitch) return video.title
+    LaunchedEffect(video.id) { DeArrow.request(video.id) }
+    return map[video.id]?.title ?: video.title
+}
+
+/** Vorschaubild von DeArrow (Bild an der von der Community gewählten Stelle) oder null. */
+@Composable
+fun brandedThumbnail(video: VideoItem): String? {
+    val map = LocalBranding.current ?: return null
+    if (video.isTwitch) return null
+    return map[video.id]?.thumbnail
+}
 
 // ---------------------------------------------------------------- Bilder
 
@@ -150,10 +172,14 @@ fun Thumbnail(video: VideoItem, modifier: Modifier = Modifier, corner: Dp = 0.dp
             .clip(RoundedCornerShape(corner))
             .background(Yt.colors.chip),
     ) {
+        val custom = brandedThumbnail(video)
+        var customFailed by remember(custom) { mutableStateOf(false) }
         AsyncImage(
-            model = video.thumbnailOrDefault,
+            model = if (custom != null && !customFailed) custom else video.thumbnailOrDefault,
             contentDescription = video.title,
             contentScale = ContentScale.Crop,
+            // DeArrow hat das Bild (noch) nicht: das Original zeigen
+            onError = { if (custom != null) customFailed = true },
             modifier = Modifier.fillMaxSize(),
         )
         DurationBadge(
@@ -214,7 +240,7 @@ fun VideoCard(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    video.title,
+                    brandedTitle(video),
                     style = VideoTitleStyle,
                     color = Yt.colors.text,
                     maxLines = 2,
@@ -272,7 +298,7 @@ fun VideoRow(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                video.title,
+                brandedTitle(video),
                 fontSize = 14.sp,
                 lineHeight = 19.sp,
                 color = Yt.colors.text,

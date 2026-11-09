@@ -76,6 +76,13 @@ data class Settings(
     val twitchChat: Boolean = true,
     /** Twitch-Werbung zuerst als gesehen melden (Ad-Spoofing), sonst übernehmen allein die Ersatz-Sitzungen */
     val twitchAdSpoofing: Boolean = true,
+    /** Untertitel automatisch einschalten (in [captionLang], "" = erste verfügbare) */
+    val captions: Boolean = false,
+    val captionLang: String = "de",
+    /** DeArrow: Titel und Vorschaubilder ohne Clickbait (Community) */
+    val dearrow: Boolean = false,
+    /** Return YouTube Dislike: Dislike-Zahl unter dem Video */
+    val returnDislike: Boolean = false,
 )
 
 /** Shorts herausfiltern, wenn sie in den Einstellungen ausgeschaltet sind. */

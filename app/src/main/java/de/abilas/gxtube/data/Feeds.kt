@@ -21,6 +21,14 @@ import java.io.File
 object SubscriptionFeed {
     private const val TAG = "SubscriptionFeed"
     private const val MAX_AGE_MS = 15 * 60 * 1000L
+    /**
+     * Fallen die RSS-Feeds aus (YouTube schaltet sie zeitweise ab), je Aktualisierung höchstens so viele
+     * Kanäle über ihren Videos-Tab – nicht alle Abos auf einmal (das löst Bot-Sperren aus).
+     */
+    private const val FALLBACK_PER_REFRESH = 25
+    /** Nach mehreren RSS-Fehlern hintereinander: eine Stunde lang gleich den Ersatz nehmen. */
+    @Volatile private var rssOffUntil = 0L
+    private val rssFailures = java.util.concurrent.atomic.AtomicInteger(0)
 
     @Serializable
     private data class Cache(
@@ -79,6 +87,27 @@ object SubscriptionFeed {
         }
     }
 
+    /**
+     * Neueste Videos eines Kanals: über RSS, sonst (Kontingent [budget]) über den Videos-Tab des Kanals.
+     * null, wenn beides nicht ging.
+     */
+    private suspend fun loadChannel(url: String, name: String, budget: java.util.concurrent.atomic.AtomicInteger): List<VideoItem>? {
+        if (System.currentTimeMillis() > rssOffUntil) {
+            val rss = runCatching { YouTubeRepo.feed(url) }
+                .onFailure { Log.w(TAG, "Feed von $name fehlgeschlagen: $it") }
+                .getOrNull()
+            if (rss != null) {
+                rssFailures.set(0)
+                return rss
+            }
+            if (rssFailures.incrementAndGet() >= 3) rssOffUntil = System.currentTimeMillis() + 60 * 60 * 1000L
+        }
+        if (budget.getAndDecrement() <= 0) return null
+        return runCatching { YouTubeRepo.channelVideos(url) }
+            .onFailure { Log.w(TAG, "Ersatz für $name fehlgeschlagen: $it") }
+            .getOrNull()
+    }
+
     private suspend fun refreshLocked(force: Boolean) {
         try {
             val current = _state.value
@@ -96,13 +125,14 @@ object SubscriptionFeed {
 
             _state.update { it.copy(loading = true, done = 0, total = subs.size, failed = 0) }
             val semaphore = Semaphore(6)
+            val fallbackBudget = java.util.concurrent.atomic.AtomicInteger(FALLBACK_PER_REFRESH)
+            // Bisherige Videos je Kanal: falls weder RSS noch Ersatz gehen, bleiben sie stehen
+            val previous = current.items.groupBy { it.channelUrl }
             val results = coroutineScope {
                 subs.map { sub ->
                     async {
                         semaphore.withPermit {
-                            val r = runCatching { YouTubeRepo.feed(sub.url) }
-                                .onFailure { Log.w(TAG, "Feed von ${sub.name} fehlgeschlagen: $it") }
-                                .getOrNull()
+                            val r = loadChannel(sub.url, sub.name, fallbackBudget)
                                 ?.map { v ->
                                     v.copy(
                                         channelName = v.channelName.ifBlank { sub.name },
@@ -111,7 +141,7 @@ object SubscriptionFeed {
                                     )
                                 }
                             _state.update { s -> s.copy(done = s.done + 1, failed = s.failed + if (r == null) 1 else 0) }
-                            r
+                            r ?: previous[sub.url]
                         }
                     }
                 }.awaitAll()

@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
+import android.os.Looper
 import android.util.Log
 import androidx.core.content.getSystemService
 import androidx.media3.common.AudioAttributes
@@ -13,8 +14,10 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.PlayerMessage
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
@@ -22,8 +25,10 @@ import de.abilas.gxtube.cast.Cast
 import de.abilas.gxtube.cast.CastConnection
 import de.abilas.gxtube.cast.RemoteQueue
 import de.abilas.gxtube.cast.RemoteState
+import de.abilas.gxtube.data.Chapter
 import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.data.SponsorBlock
+import de.abilas.gxtube.data.SponsorInfo
 import de.abilas.gxtube.data.SponsorSegment
 import de.abilas.gxtube.data.VideoItem
 import de.abilas.gxtube.data.YouTubeRepo
@@ -70,7 +75,27 @@ data class NowPlaying(
     val queueIndex: Int = -1,
     /** Twitch: Stream/VOD und Kanal (Zuschauer, Follower, Kategorie) */
     val twitch: TwitchWatchInfo? = null,
-)
+    /** SponsorBlock: Highlight, "ganzes Video ist …", Kapitel aus der Community */
+    val sponsor: SponsorInfo? = null,
+    /** Untertitel des Videos und die gerade gezeigten (null = aus) */
+    val captions: List<StreamResolver.CaptionTrack> = emptyList(),
+    val caption: StreamResolver.CaptionTrack? = null,
+    /** Qualität automatisch (ExoPlayer schaltet nach Leitung) statt fest gewählt */
+    val autoQuality: Boolean = true,
+) {
+    /** Kapitel: von YouTube (Kanal oder automatisch erzeugt), sonst aus SponsorBlock. */
+    val chapters: List<Chapter>
+        get() {
+            val yt = info?.streamSegments.orEmpty()
+                .map { Chapter(it.title.orEmpty().trim(), it.startTimeSeconds * 1000L, it.previewUrl) }
+                .filter { it.title.isNotEmpty() }
+                .sortedBy { it.startMs }
+            return if (yt.size >= 2) yt else sponsor?.chapters.orEmpty()
+        }
+}
+
+/** Hinweis mit Knopf (z. B. "Sponsor übersprungen – Rückgängig"). */
+data class ActionMessage(val text: String, val action: String, val run: () -> Unit)
 
 /**
  * Ein einziger Player für die ganze App (Video-Seite, Mini-Player, Shorts, Hintergrund,
@@ -94,6 +119,8 @@ object PlayerController {
     /** Video-Seite aufgeklappt (true) oder Mini-Player (false) */
     val expanded = MutableStateFlow(true)
     val fullscreen = MutableStateFlow(false)
+    /** Bedienleiste über dem Video gerade zu sehen – Untertitel weichen dann nach oben aus. */
+    val controlsShown = MutableStateFlow(false)
 
     private val _fullscreenRequests = MutableSharedFlow<Boolean>(extraBufferCapacity = 4)
     /** Vollbild-Knopf gedrückt (true) oder Vollbild verlassen (false) – MainActivity dreht den Bildschirm. */
@@ -106,6 +133,19 @@ object PlayerController {
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
+
+    private val _actions = MutableSharedFlow<ActionMessage>(extraBufferCapacity = 4)
+    /** Hinweise mit Knopf ("Rückgängig") */
+    val actions: SharedFlow<ActionMessage> = _actions.asSharedFlow()
+
+    /** Punktgenaues Überspringen: der Player meldet sich genau am Anfang (und Ende) jedes Abschnitts. */
+    private val sponsorMessages = mutableListOf<PlayerMessage>()
+    /** SponsorBlock hat gerade stumm geschaltet (Abschnitt "stumm"). */
+    private var mutedBySponsor = false
+    /** Zuletzt übersprungener Abschnitt (für "Rückgängig"). */
+    private var lastSkip: SponsorSegment? = null
+    /** Gewählte Untertitel (bleiben beim Qualitätswechsel). */
+    private var captionChoice: StreamResolver.CaptionTrack? = null
 
     private val _speed = MutableStateFlow(1f)
     val speed: StateFlow<Float> = _speed.asStateFlow()
@@ -163,6 +203,15 @@ object PlayerController {
             }
 
             override fun onPlayerError(error: PlaybackException) = handleError(error)
+
+            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                // Automatische Qualität: anzeigen, was gerade wirklich läuft
+                val n = _now.value ?: return
+                if (!n.autoQuality || n.video.isTwitch || videoSize.height <= 0) return
+                val f = player.videoFormat ?: return
+                val h = listOf(f.height, f.width).firstOrNull { c -> n.options.any { it.height == c } } ?: f.height
+                if (h > 0 && h != n.height) _now.update { it?.copy(height = h) }
+            }
         })
         return p
     }
@@ -215,6 +264,7 @@ object PlayerController {
         loadJob?.cancel()
         qualityJob?.cancel()
         tickerJob?.cancel()
+        resetSponsorState()
         player.stop()
         player.clearMediaItems()
         _now.value = null
@@ -238,6 +288,8 @@ object PlayerController {
         // Ein noch laufender Qualitätswechsel würde sonst den Stream des alten Videos einsetzen
         qualityJob?.cancel()
         skippedSegments.clear()
+        resetSponsorState()
+        if (_now.value?.video?.id != video.id) captionChoice = null
         player.stop()
         player.clearMediaItems()
         player.repeatMode = if (shorts) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
@@ -252,6 +304,10 @@ object PlayerController {
         }
 
         loadJob = scope.launch {
+            // SponsorBlock gleich mit dem Stream anfragen (nicht erst danach) – sonst läuft ein Sponsor
+            // ganz am Anfang des Videos schon, bevor die Abschnitte da sind
+            val settings0 = Library.settings
+            val sponsorJob = if (!shorts && settings0.sponsorBlock) async { SponsorBlock.info(video.id, settings0.sponsorCategories) } else null
             try {
                 val info = YouTubeRepo.stream(video.url)
                 val enriched = enrich(video, info)
@@ -259,13 +315,19 @@ object PlayerController {
                 val live = info.streamType == StreamType.LIVE_STREAM || info.streamType == StreamType.AUDIO_LIVE_STREAM
                 val item = mediaItem(enriched)
                 val maxHeight = qualityOverride ?: preferredHeight(shorts)
+                val captions = if (live) emptyList() else StreamResolver.captionTracks(info)
+                // Untertitel: gewählte behalten, sonst automatisch in der eingestellten Sprache
+                val caption = captionChoice?.let { c -> captions.firstOrNull { it.key == c.key } }
+                    ?: if (!shorts && settings0.captions) preferredCaption(captions, settings0.captionLang) else null
+                captionChoice = caption
                 val resolved = withContext(Dispatchers.Default) {
-                    StreamResolver.resolve(app, info, maxHeight, item)
+                    StreamResolver.resolve(app, info, maxHeight, item, adaptive = qualityOverride == null, caption = caption)
                 }
                 val resume = if (live) 0L else startMs ?: resumePosition(enriched.id, info.duration * 1000)
 
                 if (live) player.setMediaSource(resolved.source, true)
                 else player.setMediaSource(resolved.source, resume)
+                applyCaptionSelection(caption)
                 player.setPlaybackSpeed(if (shorts) 1f else _speed.value)
                 player.prepare()
                 // App inzwischen im Hintergrund und Hintergrundwiedergabe aus: nicht von selbst losspielen
@@ -285,6 +347,9 @@ object PlayerController {
                     isLive = live,
                     queue = queue,
                     queueIndex = queueIndex,
+                    captions = captions,
+                    caption = caption,
+                    autoQuality = resolved.adaptive || qualityOverride == null && resolved.options.size <= 1,
                 )
                 ensureService()
                 startTicker()
@@ -292,14 +357,14 @@ object PlayerController {
                 Library.recordWatch(enriched, resume, info.duration * 1000)
                 Library.addRecommendations(related.take(if (shorts) 4 else 12))
 
-                val settings = Library.settings
-                if (!live && settings.sponsorBlock) {
-                    val segments = SponsorBlock.segments(enriched.id, settings.sponsorCategories)
-                    if (segments.isNotEmpty()) {
-                        _now.update { n -> if (n?.video?.id == enriched.id) n.copy(segments = segments) else n }
-                        if (_now.value?.video?.id == enriched.id && player.playWhenReady) skipSegments(segments)
+                if (sponsorJob != null && !live) {
+                    val sb = sponsorJob.await()
+                    if (_now.value?.video?.id == enriched.id) {
+                        _now.update { n -> n?.copy(segments = sb.segments, sponsor = sb) }
+                        scheduleSponsorMessages(sb.segments)
+                        if (player.playWhenReady) applySponsor(sb.segments)
                     }
-                }
+                } else sponsorJob?.cancel()
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
@@ -470,18 +535,21 @@ object PlayerController {
         player.setPlaybackSpeed(value)
     }
 
+    /** Qualität fest wählen ([height] > 0) oder automatisch (0: nach Leitung, höchstens wie eingestellt). */
     fun setQuality(height: Int) {
         val n = _now.value ?: return
         if (n.video.isTwitch) return setTwitchQuality(height)
         // Beim Streamen wählt der PC die Qualität selbst
         if (_remote.value) return
         val info = n.info ?: return
-        qualityOverride = height
+        qualityOverride = height.takeIf { it > 0 }
+        val auto = qualityOverride == null
+        val maxHeight = qualityOverride ?: preferredHeight(_mode.value == PlayerMode.SHORTS)
         qualityJob?.cancel()
         qualityJob = scope.launch {
             try {
                 val resolved = withContext(Dispatchers.Default) {
-                    StreamResolver.resolve(app, info, height, mediaItem(n.video))
+                    StreamResolver.resolve(app, info, maxHeight, mediaItem(n.video), adaptive = auto, caption = captionChoice)
                 }
                 // Inzwischen ein anderes Video oder auf den PC gewechselt: nichts mehr ersetzen
                 if (_now.value?.video?.id != n.video.id || _remote.value) return@launch
@@ -489,13 +557,68 @@ object PlayerController {
                 val pos = player.currentPosition
                 val wasPlaying = player.playWhenReady
                 player.setMediaSource(resolved.source, pos)
+                applyCaptionSelection(captionChoice)
                 player.prepare()
                 player.playWhenReady = wasPlaying
-                _now.update { it?.copy(height = resolved.height) }
+                scheduleSponsorMessages(_now.value?.segments.orEmpty())
+                _now.update { it?.copy(height = resolved.height, autoQuality = auto && resolved.adaptive) }
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
                 _messages.tryEmit("Qualität konnte nicht gewechselt werden")
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ Untertitel
+
+    private fun preferredCaption(tracks: List<StreamResolver.CaptionTrack>, lang: String): StreamResolver.CaptionTrack? {
+        if (tracks.isEmpty()) return null
+        if (lang.isBlank()) return tracks.firstOrNull { !it.auto } ?: tracks.first()
+        fun match(t: StreamResolver.CaptionTrack) = t.lang.equals(lang, true) || t.lang.startsWith("$lang-", true)
+        return tracks.firstOrNull { match(it) && !it.auto } ?: tracks.firstOrNull { match(it) }
+    }
+
+    /** Textspur ein- oder ausschalten (die Untertitel stecken als eigene Spur in der Quelle). */
+    private fun applyCaptionSelection(track: StreamResolver.CaptionTrack?) {
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, track == null)
+            .apply { if (track != null) setPreferredTextLanguage(track.lang) }
+            .build()
+    }
+
+    /** Untertitel wählen (null = aus). Andere Sprache: Quelle mit dieser Spur neu aufbauen (kurzes Nachladen). */
+    fun setCaption(track: StreamResolver.CaptionTrack?) {
+        val n = _now.value ?: return
+        if (_remote.value || n.video.isTwitch) return
+        if (track == null || track.key == n.caption?.key) {
+            captionChoice = track
+            applyCaptionSelection(track)
+            _now.update { it?.copy(caption = track) }
+            return
+        }
+        val info = n.info ?: return
+        captionChoice = track
+        val maxHeight = qualityOverride ?: preferredHeight(_mode.value == PlayerMode.SHORTS)
+        qualityJob?.cancel()
+        qualityJob = scope.launch {
+            try {
+                val resolved = withContext(Dispatchers.Default) {
+                    StreamResolver.resolve(app, info, maxHeight, mediaItem(n.video), adaptive = qualityOverride == null, caption = track)
+                }
+                if (_now.value?.video?.id != n.video.id || _remote.value) return@launch
+                val pos = player.currentPosition
+                val wasPlaying = player.playWhenReady
+                player.setMediaSource(resolved.source, pos)
+                applyCaptionSelection(track)
+                player.prepare()
+                player.playWhenReady = wasPlaying
+                scheduleSponsorMessages(_now.value?.segments.orEmpty())
+                _now.update { it?.copy(caption = track) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                _messages.tryEmit("Untertitel konnten nicht geladen werden")
             }
         }
     }
@@ -619,10 +742,65 @@ object PlayerController {
             while (isActive) {
                 delay(500)
                 val n = _now.value ?: continue
-                if (n.segments.isNotEmpty() && player.isPlaying) skipSegments(n.segments)
+                if (n.segments.isNotEmpty() && player.isPlaying) applySponsor(n.segments)
                 if (++ticks % 10 == 0 && player.isPlaying) saveProgress()
             }
         }
+    }
+
+    private fun resetSponsorState() {
+        sponsorMessages.forEach { it.cancel() }
+        sponsorMessages.clear()
+        if (mutedBySponsor && _now.value?.video?.isTwitch != true) player.volume = 1f
+        mutedBySponsor = false
+        lastSkip = null
+    }
+
+    /**
+     * Der Player meldet sich genau an jedem Abschnittsanfang (und am Ende stummer Abschnitte) – so beginnt
+     * kein Sponsor-Abschnitt mehr für bis zu eine halbe Sekunde, wie mit der Abfrage alle 500 ms allein.
+     * Muss nach jedem Austausch der Quelle neu gesetzt werden.
+     */
+    private fun scheduleSponsorMessages(segments: List<SponsorSegment>) {
+        sponsorMessages.forEach { it.cancel() }
+        sponsorMessages.clear()
+        if (_remote.value) return
+        val times = segments.flatMap { if (it.isMute) listOf(it.startMs, it.endMs) else listOf(it.startMs) }.distinct()
+        for (t in times) {
+            sponsorMessages += player.createMessage { _, _ -> _now.value?.let { applySponsor(it.segments) } }
+                .setLooper(Looper.getMainLooper())
+                .setPosition(t)
+                .setDeleteAfterDelivery(false)
+                .send()
+        }
+    }
+
+    /** Stummschalten bzw. Überspringen an der aktuellen Stelle. */
+    private fun applySponsor(segments: List<SponsorSegment>) {
+        if (_remote.value || _now.value?.video?.isTwitch == true) return
+        val pos = player.currentPosition
+        val mute = segments.firstOrNull { it.isMute && pos >= it.startMs && pos < it.endMs }
+        if (mute != null && !mutedBySponsor) {
+            mutedBySponsor = true
+            player.volume = 0f
+            _messages.tryEmit("${SponsorBlock.label(mute.category)}: stumm geschaltet")
+        } else if (mute == null && mutedBySponsor) {
+            mutedBySponsor = false
+            player.volume = 1f
+        }
+        skipSegments(segments.filterNot { it.isMute })
+    }
+
+    /** Den zuletzt übersprungenen Abschnitt doch ansehen (bleibt als übersprungen markiert). */
+    fun undoSkip() {
+        val seg = lastSkip ?: return
+        lastSkip = null
+        seekTo(seg.startMs)
+    }
+
+    /** Zum Höhepunkt des Videos (SponsorBlock-Highlight) springen. */
+    fun seekToHighlight() {
+        _now.value?.sponsor?.highlightMs?.let { seekTo(it) }
     }
 
     private fun skipSegments(segments: List<SponsorSegment>) {
@@ -642,7 +820,8 @@ object PlayerController {
         }
         val dur = player.duration.takeIf { it != C.TIME_UNSET && it > 0 }
         player.seekTo(if (dur != null) minOf(endMs, dur) else endMs)
-        _messages.tryEmit("${SponsorBlock.label(seg.category)} übersprungen")
+        lastSkip = seg
+        _actions.tryEmit(ActionMessage("${SponsorBlock.label(seg.category)} übersprungen", "Rückgängig") { undoSkip() })
     }
 
     fun saveProgress() {
@@ -712,7 +891,7 @@ object PlayerController {
             return
         }
         lastRemote = s
-        val segments = s.segments.map { SponsorSegment(listOf(it.startMs / 1000.0, it.endMs / 1000.0), it.category, uuid = it.uuid) }
+        val segments = s.segments.map { SponsorSegment(listOf(it.startMs / 1000.0, it.endMs / 1000.0), it.category, actionType = it.action, uuid = it.uuid) }
         val n = _now.value
         if (!_remote.value || n == null || n.video.id != rv.id || _mode.value != PlayerMode.WATCH) {
             if (_mode.value == PlayerMode.SHORTS) return // Shorts laufen auf dem Handy weiter
@@ -781,6 +960,12 @@ object PlayerController {
                 }
                 Library.recordWatch(enriched, positionMs, info.duration * 1000)
                 Library.addRecommendations(related.take(12))
+                // Highlight, "ganzes Video" und Kapitel für die Anzeige (übersprungen wird am PC)
+                val settings = Library.settings
+                if (!live && settings.sponsorBlock) {
+                    val sb = SponsorBlock.info(video.id, settings.sponsorCategories)
+                    _now.update { n -> if (n?.video?.id == video.id) n.copy(sponsor = sb) else n }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.PlaylistAdd
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.ThumbDown
@@ -49,20 +50,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
+import de.abilas.gxtube.data.Chapter
 import de.abilas.gxtube.data.Comment
 import de.abilas.gxtube.data.Library
+import de.abilas.gxtube.data.ReturnDislike
 import de.abilas.gxtube.data.Paged
 import de.abilas.gxtube.data.YouTubeRepo
 import de.abilas.gxtube.data.filterShorts
@@ -78,6 +85,7 @@ import de.abilas.gxtube.ui.components.PillButton
 import de.abilas.gxtube.ui.components.SubscribeButton
 import de.abilas.gxtube.ui.components.VerifiedIcon
 import de.abilas.gxtube.ui.components.VideoCard
+import de.abilas.gxtube.ui.components.brandedTitle
 import de.abilas.gxtube.ui.rememberLinkListener
 import de.abilas.gxtube.ui.shareText
 import de.abilas.gxtube.ui.theme.Yt
@@ -98,6 +106,12 @@ fun WatchDetails(n: NowPlaying) {
     var showComments by remember(n.video.id) { mutableStateOf(false) }
     val comments = rememberCommentsState(n.video.url)
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    // Return YouTube Dislike (nur wenn eingeschaltet)
+    val dislikeOn = lib.settings.returnDislike
+    val votes by produceState<ReturnDislike.Votes?>(null, n.video.id, dislikeOn) {
+        value = if (dislikeOn && !n.video.isTwitch) ReturnDislike.votes(n.video.id) else null
+    }
+    val chapters = remember(n.info, n.sponsor) { n.chapters }
 
     LaunchedEffect(n.video.id) { listState.scrollToItem(0) }
 
@@ -119,7 +133,7 @@ fun WatchDetails(n: NowPlaying) {
                     .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
             ) {
                 Text(
-                    n.video.title,
+                    brandedTitle(n.video),
                     fontSize = 18.sp,
                     lineHeight = 24.sp,
                     fontWeight = FontWeight.Medium,
@@ -137,6 +151,20 @@ fun WatchDetails(n: NowPlaying) {
                     fontSize = 12.sp,
                     color = Yt.colors.textSecondary,
                 )
+                // SponsorBlock: "Das ganze Video ist gesponsert" usw.
+                n.sponsor?.fullLabel?.let { label ->
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        label,
+                        color = Color(0xFFFFD84D),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFF4A3B00))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    )
+                }
             }
         }
         item(key = "channel") {
@@ -222,12 +250,12 @@ fun WatchDetails(n: NowPlaying) {
                                 .height(22.dp)
                                 .background(Yt.colors.divider),
                         )
-                        Box(
+                        Row(
                             Modifier
                                 .clickable { Library.toggleDislike(n.video) }
                                 .padding(horizontal = 12.dp)
                                 .height(36.dp),
-                            contentAlignment = Alignment.Center,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
                                 if (disliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
@@ -235,8 +263,21 @@ fun WatchDetails(n: NowPlaying) {
                                 tint = Yt.colors.text,
                                 modifier = Modifier.size(20.dp),
                             )
+                            // Schätzung von Return YouTube Dislike
+                            votes?.dislikes?.let { d ->
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    Fmt.count(d + if (disliked) 1 else 0),
+                                    color = Yt.colors.text,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                            }
                         }
                     }
+                }
+                n.sponsor?.highlightMs?.let { h ->
+                    item { PillButton("Highlight ${Fmt.durationMs(h)}", Icons.Outlined.Flag, { PlayerController.seekToHighlight() }) }
                 }
                 item { PillButton("Teilen", Icons.Outlined.Share, { shareText(context, n.video.shareUrl) }) }
                 item {
@@ -245,6 +286,27 @@ fun WatchDetails(n: NowPlaying) {
                         if (later) Icons.Outlined.Check else Icons.Outlined.PlaylistAdd,
                         { Library.toggleWatchLater(n.video) },
                     )
+                }
+            }
+        }
+        if (chapters.isNotEmpty()) {
+            item(key = "chapters") {
+                Column(Modifier.padding(top = 4.dp, bottom = 8.dp)) {
+                    Text(
+                        if (n.info?.streamSegments.orEmpty().size >= 2) "Kapitel" else "Kapitel (SponsorBlock)",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Yt.colors.text,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    )
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        items(chapters, key = { "ch-${it.startMs}" }) { c ->
+                            ChapterCard(c) { PlayerController.seekTo(c.startMs) }
+                        }
+                    }
                 }
             }
         }
@@ -291,6 +353,47 @@ fun WatchDetails(n: NowPlaying) {
 
     if (showDescription) DescriptionSheet(n) { showDescription = false }
     if (showComments) CommentsSheet(n.video.url, comments) { showComments = false }
+}
+
+/** Ein Kapitel: Vorschaubild (wenn YouTube eins hat), Name, Startzeit – antippen springt dorthin. */
+@Composable
+private fun ChapterCard(c: Chapter, onClick: () -> Unit) {
+    Column(
+        Modifier
+            .width(150.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(84.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Yt.colors.chip),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (!c.thumbnail.isNullOrBlank()) {
+                AsyncImage(
+                    model = c.thumbnail,
+                    contentDescription = c.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Text(Fmt.durationMs(c.startMs), color = Yt.colors.textSecondary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            }
+        }
+        Text(
+            c.title,
+            fontSize = 13.sp,
+            lineHeight = 17.sp,
+            color = Yt.colors.text,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+        Text(Fmt.durationMs(c.startMs), fontSize = 12.sp, color = Yt.colors.link)
+    }
 }
 
 // ---------------------------------------------------------------- Beschreibung
