@@ -33,8 +33,10 @@ import kotlin.random.Random
  *
  * Twitch schneidet Werbung in die Live-Playlist. Eine zweite Sitzung desselben Streams (anderer
  * "playerType") ist im selben Moment oft werbefrei:
- *  - Während der Werbung bekommt der Player die Playlist einer werbefreien Ersatz-Sitzung: sofort die
- *    360p-Brücke ("autoplay"), volle Qualität, sobald eine Sitzung zweimal (1,5 s auseinander) frei war.
+ *  - Während der Werbung bekommt der Player die Playlist einer werbefreien Ersatz-Sitzung: sofort eine
+ *    360p-Brücke ("autoplay" als Android, sonst "picture-by-picture" als iOS), volle Qualität, sobald
+ *    eine Sitzung zweimal (1,5 s auseinander) frei war. Liegt die Ersatz-Sitzung ein paar Sekunden
+ *    zurück, wird trotzdem sofort gewechselt (kurz doppelt statt schwarz) – die Werbung wird übersprungen.
  *  - Ist die eigene Sitzung drei Aktualisierungen lang frei, geht es dorthin zurück.
  *  - Alles läuft auf einer Zeitleiste: Segmentnummern steigen nur, ein Quellwechsel ist eine
  *    Diskontinuität, ausgerichtet nach EXT-X-PROGRAM-DATE-TIME (nichts doppelt, nichts übersprungen).
@@ -62,6 +64,7 @@ class TwitchAdBlock(
         const val SEARCH = 1500L
         const val PROOF = 1500L
         const val AD_COOLDOWN = 15000L
+        const val LQ_AD_COOLDOWN = 5000L // die Brücken öfter fragen: jede Sekunde ohne sie ist schwarz
         const val ERROR_COOLDOWN = 5000L
         const val FORBIDDEN = 300000L
         const val STALLED = 10000L
@@ -353,7 +356,9 @@ class TwitchAdBlock(
         }
 
         // Sonst / besser: sofort die 360p-Brücke, volle Qualität, sobald sie sich als frei erwiesen hat
-        val lqF: Future<Backup?>? = if (!curOk && curType != LQ_TYPE) scanner.submit<Backup?> { backupPlaylist(ctx, LQ_TYPE, want, true) } else null
+        val lqF: List<Future<Backup?>> = if (curOk) emptyList() else LQ_TYPES.filter { it != curType }.map { type ->
+            scanner.submit<Backup?> { backupPlaylist(ctx, type, want, true) }
+        }
         var hq: Backup? = null
         if (!curOk || cur!!.lq) {
             hq = provenHq(ctx, want, curType)
@@ -364,18 +369,18 @@ class TwitchAdBlock(
                 if (hq != null && hq.ads) hq = null
             }
         }
-        val lq = lqF?.let { runCatching { it.get(T.FETCH * 2, TimeUnit.MILLISECONDS) }.getOrNull() }
+        val lqs = lqF.mapNotNull { f -> runCatching { f.get(T.FETCH * 2, TimeUnit.MILLISECONDS) }.getOrNull() }.filter { !it.ads }
         val picks = ArrayList<Backup>()
         if (curOk && !cur!!.lq) picks += cur
         if (hq != null && hq.proven) picks += hq
         if (curOk) picks += cur!!
-        if (lq != null && !lq.ads) picks += lq
+        picks += lqs
         if (hq != null) picks += hq
-        for (b in picks) {
+        fun use(b: Backup, force: Boolean): String? {
             val before = ctx.tl.source
-            val out = serve(ctx, url, b.id, b.parsed) ?: continue // noch nichts Neueres als beim Player
+            val out = serve(ctx, url, b.id, b.parsed, force = force) ?: return null
             if (before != b.id) {
-                Log.i(TAG, "Ersatz-Sitzung ${b.type} (${b.res})")
+                Log.i(TAG, "Ersatz-Sitzung ${b.type} (${b.res})${if (force) " sofort" else ""}")
                 events(Event.BackupUsed(b.type))
             }
             b.session.trusted = true
@@ -383,6 +388,10 @@ class TwitchAdBlock(
             unmask(ctx)
             return out
         }
+        for (b in picks) use(b, false)?.let { return it } // null: noch nichts Neueres als beim Player
+        // Werbefrei, aber ein paar Sekunden zurück: trotzdem gleich hin – ein paar Sekunden doppelt
+        // sind besser als die ganze Werbepause schwarz (früher bis zu 6 s Warten auf schwarzem Bild)
+        for (b in picks) use(b, true)?.let { return it }
 
         // Nichts werbefrei
         setBridge(ctx, false)
@@ -496,7 +505,7 @@ class TwitchAdBlock(
             put("isVod", ctx.vod != null)
             put("vodID", ctx.vod ?: "")
             put("playerType", type)
-            put("platform", if (type == LQ_TYPE) "android" else "web")
+            put("platform", platformOf(type))
         }
         val body = buildJsonObject {
             put("operationName", "PlaybackAccessToken_Template")
@@ -529,7 +538,7 @@ class TwitchAdBlock(
         return Session(sessionSeq, type, variants, old?.errors ?: 0, old?.last)
     }
 
-    private fun proven(s: Session) = s.type == LQ_TYPE || s.trusted || (s.cleanLooks >= 2 && now() - s.firstClean >= T.PROOF)
+    private fun proven(s: Session) = s.type in LQ_TYPES || s.trusted || (s.cleanLooks >= 2 && now() - s.firstClean >= T.PROOF)
 
     private fun fail(ctx: Ctx, type: String, old: Session?, error: String, cooldown: Long = 0) {
         val s = old ?: Session(0, type, null, 0, null)
@@ -569,7 +578,7 @@ class TwitchAdBlock(
                 if (ads) {
                     sess.cleanLooks = 0
                     sess.trusted = false
-                    sess.retryAt = now() + T.AD_COOLDOWN
+                    sess.retryAt = now() + if (type in LQ_TYPES) T.LQ_AD_COOLDOWN else T.AD_COOLDOWN
                     sess.last = "werbung"
                 } else {
                     if (sess.cleanLooks == 0) sess.firstClean = sess.lastLook
@@ -577,7 +586,7 @@ class TwitchAdBlock(
                     sess.retryAt = 0
                     sess.last = "frei"
                 }
-                return Backup(type, "$type:${sess.id}", sess, parsed, text, ads, type == LQ_TYPE, v.res, want, !ads && proven(sess))
+                return Backup(type, "$type:${sess.id}", sess, parsed, text, ads, type in LQ_TYPES, v.res, want, !ads && proven(sess))
             } catch (e: Exception) {
                 if (!fresh) { // die alte Sitzung ist abgelaufen: einmal mit einer neuen
                     s!!.variants = null
@@ -753,9 +762,16 @@ class TwitchAdBlock(
         const val WEB_CLIENT = "kimne78kx3ncx6brgo4mv6wki5h1ko"
         const val GQL_URL = "https://gql.twitch.tv/gql"
         const val HOLD_URL = "https://www.twitch.tv/__adblock_gx_hold.ts"
-        private const val LQ_TYPE = "autoplay" // nur 360p, aber schnell und meist werbefrei
-        private val TYPES = listOf("popout", "frontpage", "mobile_web", "site", "autoplay")
-        private val HQ_TYPES = TYPES.filter { it != LQ_TYPE }
+        /** Nur 360p, aber schnell und meist werbefrei – zwei getrennte Sitzungen, damit eine Werbung nicht beide trifft */
+        private val LQ_TYPES = listOf("autoplay", "picture-by-picture")
+        private val HQ_TYPES = listOf("popout", "frontpage", "mobile_web", "site")
+
+        /** Twitch entscheidet Werbung auch nach Plattform: die Brücken als Android- bzw. iOS-App */
+        private fun platformOf(type: String) = when (type) {
+            "autoplay" -> "android"
+            "picture-by-picture" -> "ios"
+            else -> "web"
+        }
 
         private val AD_TEXT = Regex(
             "stitched-ad|X-TV-TWITCH-AD|/adsquared/|SCTE35-OUT|EXT-X-CUE-OUT|CLASS=\"twitch-(?:stitched-)?ad(?:-|\")|\"MIDROLL\"",

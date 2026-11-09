@@ -88,9 +88,10 @@ Protokoll: [PROTOCOL.md](https://github.com/abilas-sivarajah/adblock-tube-gx-des
 ## 🟣 Twitch
 
 - **Werbung:** Twitch schneidet die Werbung in den Stream. Der Werbeblocker aus AdBlock GX (hier in Kotlin für
-  ExoPlayer) holt während einer Werbepause dieselbe Sendung über eine zweite, werbefreie Twitch-Sitzung –
-  kurz in 360p, dann wieder in voller Qualität – und kehrt danach zum eigenen Stream zurück. Findet er keine,
-  läuft für die Dauer der Werbung ein schwarzes Bild („Werbepause – GX Tube blendet sie aus“).
+  ExoPlayer) überspringt eine Werbepause: Der Stream läuft über eine zweite, werbefreie Twitch-Sitzung weiter –
+  sofort in 360p (zwei getrennte Sitzungen als Android- und iOS-App), dann wieder in voller Qualität – und kehrt
+  danach zum eigenen Stream zurück. Nur wenn Twitch in allen Sitzungen Werbung zeigt, läuft für die Dauer der
+  Werbung ein schwarzes Bild („Twitch zeigt gerade überall Werbung“).
   Werbung wird nie als „gesehen“ gemeldet.
 - **Chat:** Mitlesen geht ohne Konto. Zum **Schreiben** unter Einstellungen → Twitch (oder direkt im Chat)
   **bei Twitch anmelden** – wie bei Twitch auf dem Fernseher: „Hier in der App anmelden“ (der Code ist schon

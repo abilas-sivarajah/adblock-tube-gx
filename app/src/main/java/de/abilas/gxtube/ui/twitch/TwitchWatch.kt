@@ -418,7 +418,7 @@ fun TwitchAdOverlay(compact: Boolean, modifier: Modifier = Modifier) {
             )
             Text(
                 when {
-                    ads.masked && ads.hold -> "Werbepause – GX Tube blendet sie aus"
+                    ads.masked && ads.hold -> "Twitch zeigt gerade überall Werbung – gleich geht's live weiter"
                     ads.masked -> "Werbung läuft stumm im Hintergrund"
                     else -> "Werbung übersprungen – kurz in 360p"
                 },
@@ -430,8 +430,8 @@ fun TwitchAdOverlay(compact: Boolean, modifier: Modifier = Modifier) {
 }
 
 /** Für die Einstellungen: Hinweis, dass Werbung bei Twitch ausgeblendet wird. */
-fun twitchAdNote(): String = "Twitch-Werbung blendet GX Tube mit dem Werbeblocker aus Adblock GX aus: Während einer Werbepause läuft eine " +
-    "werbefreie zweite Twitch-Sitzung (kurz in 360p), sonst ein schwarzes Bild."
+fun twitchAdNote(): String = "Twitch-Werbung überspringt GX Tube mit dem Werbeblocker aus Adblock GX: Während einer Werbepause läuft der " +
+    "Stream über eine werbefreie zweite Twitch-Sitzung weiter (kurz in 360p). Nur wenn Twitch überall Werbung zeigt, kommt so lange ein schwarzes Bild."
 
 /** Läuft gerade ein Twitch-Video im Player? */
 fun isTwitchPlaying(): Boolean = PlayerController.now.value?.video?.isTwitch == true
