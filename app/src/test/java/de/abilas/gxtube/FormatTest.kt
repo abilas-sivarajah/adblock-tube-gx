@@ -4,6 +4,7 @@ import de.abilas.gxtube.data.HomeFeed
 import de.abilas.gxtube.data.VideoItem
 import de.abilas.gxtube.data.filterShorts
 import de.abilas.gxtube.data.channelKey
+import de.abilas.gxtube.data.startSecondsOf
 import de.abilas.gxtube.data.videoIdOf
 import de.abilas.gxtube.update.Updater
 import de.abilas.gxtube.util.Fmt
@@ -42,6 +43,17 @@ class FormatTest {
         assertEquals("vor 2 Stunden", Fmt.ago(now - 2 * 3_600_000L - 1000))
         assertEquals("vor 1 Jahr", Fmt.ago(now - 400 * 86_400_000L))
         assertEquals("gestern live", Fmt.ago(null, "gestern live"))
+    }
+
+    @Test
+    fun startTimes() {
+        assertEquals(90L, startSecondsOf("https://youtu.be/dQw4w9WgXcQ?t=90"))
+        assertEquals(90L, startSecondsOf("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90s"))
+        assertEquals(90L, startSecondsOf("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1m30s&si=x"))
+        assertEquals(3723L, startSecondsOf("https://www.youtube.com/watch?v=dQw4w9WgXcQ#t=1h2m3s"))
+        assertEquals(60L, startSecondsOf("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1m"))
+        assertNull(startSecondsOf("https://www.youtube.com/watch?v=dQw4w9WgXcQ"))
+        assertNull(startSecondsOf("https://www.youtube.com/watch?v=dQw4w9WgXcQ&feature=share"))
     }
 
     @Test

@@ -85,6 +85,21 @@ sealed interface ListEntry {
 private val VIDEO_ID = Regex("""(?:[?&]v=|youtu\.be/|/shorts/|/embed/|/live/|/v/)([A-Za-z0-9_-]{11})""")
 private val CHANNEL_ID = Regex("""/channel/(UC[A-Za-z0-9_-]{22})""")
 
+private val TIME_PARAM = Regex("""[?&#](?:t|start|time_continue)=(\d+h)?(\d+m)?(\d+)?s?(?=[&#]|$)""")
+
+/**
+ * Startzeit aus einem Link in Sekunden: "?t=90", "?t=90s", "&t=1m30s", "#t=1h2m3s" (wie bei YouTube).
+ * Früher wurde nur die erste Zahl gelesen – "?t=1m30s" sprang auf 1 Sekunde.
+ */
+fun startSecondsOf(url: String?): Long? {
+    val m = TIME_PARAM.find(url ?: return null) ?: return null
+    val h = m.groupValues[1].dropLast(1).toLongOrNull() ?: 0
+    val min = m.groupValues[2].dropLast(1).toLongOrNull() ?: 0
+    val s = m.groupValues[3].toLongOrNull() ?: 0
+    if (m.groupValues.drop(1).all { it.isEmpty() }) return null
+    return h * 3600 + min * 60 + s
+}
+
 fun videoIdOf(url: String?): String? {
     if (url.isNullOrBlank()) return null
     VIDEO_ID.find(url)?.let { return it.groupValues[1] }

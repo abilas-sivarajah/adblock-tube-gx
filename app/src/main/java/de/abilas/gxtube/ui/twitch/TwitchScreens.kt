@@ -128,6 +128,8 @@ class TwitchList(private val scope: kotlinx.coroutines.CoroutineScope) {
                 throw e
             } catch (t: Throwable) {
                 error = errorText(t)
+                // Nicht mit dem Cursor der vorigen Liste (z. B. andere Sprache) weiterblättern
+                next = null
             } finally {
                 loading = false
                 refreshing = false

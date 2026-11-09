@@ -193,6 +193,8 @@ object Updater {
                             _state.value = State.Downloading(release, (done.toFloat() / total).coerceIn(0f, 1f))
                         }
                     }
+                    // Verbindung mittendrin abgerissen: nicht die halbe APK installieren wollen
+                    if (total > 0 && done < total) throw IllegalStateException("Download unvollständig (${done / 1024} von ${total / 1024} KB) – bitte erneut versuchen")
                 }
             }
         }

@@ -260,7 +260,11 @@ object Account {
         channelKey(url).takeIf { it.startsWith("UC") && it.length == 24 }
 
     suspend fun setSubscribed(channelUrl: String, subscribed: Boolean) {
-        val id = channelId(channelUrl) ?: return
+        // Adressen wie youtube.com/@name enthalten keine Kanal-ID – dann nachschlagen
+        // (früher ging das Abo hier still nicht ins Konto)
+        val id = channelId(channelUrl)
+            ?: channelId(YouTubeRepo.channel(channelUrl).ref.url)
+            ?: throw AccountException("Kanal-ID nicht gefunden")
         call(if (subscribed) "subscription/subscribe" else "subscription/unsubscribe", """"channelIds":[${quote(id)}]""")
     }
 

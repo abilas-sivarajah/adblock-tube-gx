@@ -36,6 +36,9 @@ class PagedList<T>(private val scope: CoroutineScope, private val keyOf: (T) -> 
     fun reload(pull: Boolean = true) {
         val src = source ?: return
         job?.cancel()
+        // Weiterblättern gehört zur alten Abfrage – scheitert die neue, sonst kämen deren Ergebnisse
+        next = null
+        hasMore = false
         job = scope.launch {
             refreshing = pull
             loading = true

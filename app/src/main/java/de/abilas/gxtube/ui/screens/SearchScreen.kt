@@ -106,6 +106,9 @@ class SearchViewModel(initial: String) : ViewModel() {
     fun submit(query: String) {
         val q = query.trim()
         if (q.isEmpty()) return
+        // Noch laufende Vorschlags-Abfrage verwerfen, sonst legen sich die Vorschläge über die Ergebnisse
+        suggestJob?.cancel()
+        suggestions = emptyList()
         field = TextFieldValue(q, TextRange(q.length))
         submitted = q
         correction = null

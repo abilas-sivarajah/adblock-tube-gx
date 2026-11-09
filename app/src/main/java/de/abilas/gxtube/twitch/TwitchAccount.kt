@@ -93,7 +93,8 @@ object TwitchAccount {
         if (exp - System.currentTimeMillis() > 10 * 60_000) return@withLock
         runCatching { TwitchApi.refresh(s.tokens) }
             .onSuccess { save(s.copy(tokens = it)) }
-            .onFailure { markExpired() }
+            // Kein Netz o. Ä. ist kein Grund, die Anmeldung wegzuwerfen – nur eine Ablehnung von Twitch
+            .onFailure { if ((it as? TwitchException)?.signIn == true) markExpired() }
     }
 
     /** Ist die Anmeldung noch gültig? (beim Start) */

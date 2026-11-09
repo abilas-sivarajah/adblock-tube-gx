@@ -569,7 +569,10 @@ object TwitchApi {
     suspend fun refresh(t: Tokens): Tokens {
         val refresh = t.refreshToken ?: throw TwitchException("Twitch-Anmeldung abgelaufen", "401", signIn = true)
         val (status, j) = postForm("https://id.twitch.tv/oauth2/token", "client_id" to t.clientId, "grant_type" to "refresh_token", "refresh_token" to refresh)
-        if (status !in 200..299 || j["access_token"].str == null) throw TwitchException("Twitch-Anmeldung abgelaufen", "401", signIn = true)
+        // Nur eine Ablehnung (4xx) heißt "abgelaufen" – Server- und Netzfehler sind vorübergehend
+        if (status in 400..499) throw TwitchException("Twitch-Anmeldung abgelaufen", "401", signIn = true)
+        if (status !in 200..299) throw TwitchException("Twitch ist gerade nicht erreichbar (HTTP $status)")
+        if (j["access_token"].str == null) throw TwitchException("Twitch-Anmeldung abgelaufen", "401", signIn = true)
         return tokens(j, refresh).copy(clientId = t.clientId)
     }
 

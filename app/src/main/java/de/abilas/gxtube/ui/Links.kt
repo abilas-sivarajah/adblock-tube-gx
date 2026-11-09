@@ -13,11 +13,11 @@ import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.platform.LocalContext
 import de.abilas.gxtube.data.VideoItem
+import de.abilas.gxtube.data.startSecondsOf
 import de.abilas.gxtube.data.videoIdOf
 import de.abilas.gxtube.player.PlayerController
 import org.schabi.newpipe.extractor.stream.Description
 
-private val TIME_PARAM = Regex("""[?&#]t=(\d+)""")
 
 /**
  * Links in Beschreibungen/Kommentaren: YouTube-Links bleiben in GX Tube
@@ -25,7 +25,7 @@ private val TIME_PARAM = Regex("""[?&#]t=(\d+)""")
  */
 fun openLink(context: Context, nav: AppNav?, url: String) {
     val id = videoIdOf(url)
-    val seconds = TIME_PARAM.find(url)?.groupValues?.get(1)?.toLongOrNull()
+    val seconds = startSecondsOf(url)
     val current = PlayerController.now.value?.video?.id
     when {
         id != null && id == current && seconds != null -> PlayerController.seekTo(seconds * 1000)

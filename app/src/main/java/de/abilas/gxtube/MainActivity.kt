@@ -127,7 +127,7 @@ class MainActivity : ComponentActivity() {
             return
         }
         val id = videoIdOf(url)
-        val seconds = Regex("""[?&#]t=(\d+)""").find(url)?.groupValues?.get(1)?.toLongOrNull()
+        val seconds = de.abilas.gxtube.data.startSecondsOf(url)
         val search = Regex("""[?&]search_query=([^&]+)""").find(url)?.groupValues?.get(1)
         when {
             search != null -> IntentRouter.pending.value = "search:" + Uri.decode(search.replace('+', ' '))
