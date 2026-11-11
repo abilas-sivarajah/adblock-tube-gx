@@ -51,7 +51,30 @@ data class TwitchHome(val streams: List<VideoItem>, val next: String?, val top: 
 data class TwitchPage<T>(val items: List<T>, val next: String?)
 data class TwitchCategory(val game: TwitchGame, val streams: TwitchPage<VideoItem>)
 data class TwitchChannelPage(val channel: TwitchChannel, val videos: TwitchPage<VideoItem>)
-data class TwitchSearch(val channels: List<TwitchChannel>, val games: List<TwitchGame>)
+/**
+ * Suchergebnis wie auf twitch.tv: Kanäle ([next]: weitere Seite), Kategorien, Live-Kanäle mit passendem Tag
+ * ([tag]: der Tag, über den sie gefunden wurden, falls er der Suche entspricht) und vergangene Videos.
+ */
+data class TwitchSearch(
+    val channels: List<TwitchChannel>,
+    val games: List<TwitchGame>,
+    val next: String? = null,
+    val live: List<VideoItem> = emptyList(),
+    val tag: String? = null,
+    val videos: List<VideoItem> = emptyList(),
+)
+
+/** Vorschlag beim Tippen (wie im Suchfeld auf twitch.tv): Kanal, Kategorie oder sonst ein Suchbegriff. */
+data class TwitchSuggestion(
+    val text: String,
+    /** Getippter Teil in [text] (Anfang bis Ende, exklusiv) zum Hervorheben – oder null. */
+    val match: IntRange? = null,
+    val channel: TwitchChannel? = null,
+    val verified: Boolean = false,
+    val game: TwitchGame? = null,
+) {
+    val key get() = channel?.let { "c:" + it.login } ?: game?.let { "g:" + it.name.lowercase() } ?: ("q:" + text.lowercase())
+}
 data class TwitchPlayback(val url: String, val isLive: Boolean, val login: String?, val vod: String?, val account: Boolean)
 
 /** Was gerade läuft: der Stream bzw. das VOD und der Kanal dazu. */
@@ -297,22 +320,109 @@ object TwitchApi {
         return TwitchCategory(game(g)!!, TwitchPage(streams.edges().mapNotNull { stream(it["node"].obj) }, streams.next()))
     }
 
-    /** Suche: Kanäle (genau der gesuchte zuerst, dann wer live ist) und Kategorien. */
-    suspend fun search(query: String): TwitchSearch {
-        val d = gql(
-            "query(\$q: String!) { searchFor(userQuery: \$q, platform: \"web\", options: {targets: [{index: CHANNEL}]}) {" +
-                " channels { items { $USER followers { totalCount } stream { $STREAM } } } }" +
-                " searchCategories(query: \$q, first: 12) { edges { node { $GAME } } } }",
-            vars("q" to query.take(200)),
-        )
-        val channels = (d["searchFor"].obj?.get("channels").obj?.get("items") as? JsonArray)?.mapNotNull { channel(it.obj) }.orEmpty().distinctBy { it.login }
+    private const val SEARCH_CHANNELS = "channels { cursor items { $USER followers { totalCount } stream { $STREAM } } }"
+
+    /** Kanäle einer Suchseite: genau der gesuchte zuerst, dann wer live ist (nach Zuschauern), dann der Rest. */
+    fun sortChannels(items: JsonArray?, query: String): List<TwitchChannel> {
+        val channels = items?.mapNotNull { channel(it.obj) }.orEmpty().distinctBy { it.login }
         val wanted = query.trim().lowercase().removePrefix("@")
         val exact = channels.filter { it.login == wanted || it.name.lowercase() == wanted }
         val rest = channels - exact.toSet()
-        return TwitchSearch(
-            channels = exact + rest.filter { it.live != null }.sortedByDescending { it.live?.viewCount ?: 0 } + rest.filter { it.live == null },
-            games = d["searchCategories"].obj.edges().mapNotNull { game(it["node"].obj) }.distinctBy { it.name },
+        return exact + rest.filter { it.live != null }.sortedByDescending { it.live?.viewCount ?: 0 } + rest.filter { it.live == null }
+    }
+
+    /**
+     * Suche wie auf twitch.tv, in einer Abfrage: Kanäle (mit Weiterblättern), Kategorien, Live-Kanäle mit
+     * passendem Tag ("deutsch", "speedrun" …) und vergangene Videos.
+     */
+    suspend fun search(query: String): TwitchSearch {
+        val q = query.take(200)
+        val d = gql(
+            "query(\$q: String!) {" +
+                " channels: searchFor(userQuery: \$q, platform: \"web\", options: {targets: [{index: CHANNEL}]}) { $SEARCH_CHANNELS }" +
+                " more: searchFor(userQuery: \$q, platform: \"web\") {" +
+                " channelsWithTag { items { $USER stream { $STREAM freeformTags { name } } } }" +
+                " videos { items { $VIDEO owner { $USER } } } }" +
+                " searchCategories(query: \$q, first: 12) { edges { node { $GAME } } } }",
+            vars("q" to q),
         )
+        return searchFrom(d, q)
+    }
+
+    /** Antwort von [search] umwandeln (öffentlich für Tests). */
+    fun searchFrom(d: JsonObject, query: String): TwitchSearch {
+        val channels = d["channels"].obj?.get("channels").obj
+        val tagged = (d["more"].obj?.get("channelsWithTag").obj?.get("items") as? JsonArray)?.mapNotNull { it.obj?.takeIf { u -> u["stream"].obj != null } }.orEmpty()
+        val wanted = query.trim().lowercase().replace(Regex("\\s+"), "")
+        val tag = tagged.firstNotNullOfOrNull { u ->
+            (u["stream"].obj?.get("freeformTags") as? JsonArray)?.mapNotNull { it.obj?.get("name").str }?.firstOrNull { it.lowercase() == wanted }
+        }
+        return TwitchSearch(
+            channels = sortChannels(channels?.get("items") as? JsonArray, query),
+            games = d["searchCategories"].obj.edges().mapNotNull { game(it["node"].obj) }.distinctBy { it.name },
+            next = channels?.get("cursor").str?.takeIf { it.isNotEmpty() },
+            live = tagged.mapNotNull { stream(it["stream"].obj, it) }.distinctBy { it.id }.sortedByDescending { it.viewCount }.take(60),
+            tag = tag,
+            videos = (d["more"].obj?.get("videos").obj?.get("items") as? JsonArray)?.mapNotNull { vod(it.obj) }.orEmpty().distinctBy { it.id },
+        )
+    }
+
+    /** Weitere Kanäle zur Suche ([cursor] aus [search] bzw. dem letzten Aufruf). */
+    suspend fun searchChannels(query: String, cursor: String): TwitchPage<TwitchChannel> {
+        val d = gql(
+            "query(\$q: String!, \$after: String) { searchFor(userQuery: \$q, platform: \"web\", options: {targets: [{index: CHANNEL, cursor: \$after}]}) { $SEARCH_CHANNELS } }",
+            vars("q" to query.take(200), "after" to cursor.take(100)),
+        )
+        val c = d["searchFor"].obj?.get("channels").obj
+        val items = sortChannels(c?.get("items") as? JsonArray, query)
+        return TwitchPage(items, c?.get("cursor").str?.takeIf { it.isNotEmpty() && items.isNotEmpty() })
+    }
+
+    /** Vorschläge beim Tippen (wie im Suchfeld auf twitch.tv). */
+    suspend fun suggestions(query: String): List<TwitchSuggestion> {
+        val q = query.trim().take(100)
+        if (q.isEmpty()) return emptyList()
+        val d = gql(
+            "query(\$q: String!) { searchSuggestions(queryFragment: \$q, withOfflineChannelContent: true) { edges { node { text" +
+                " content { __typename" +
+                " ... on SearchSuggestionChannel { isLive isVerified login profileImageURL(width: 50) user { $USER stream { $STREAM } } }" +
+                " ... on SearchSuggestionCategory { game { $GAME } } }" +
+                " matchingCharacters { start end } } } } }",
+            vars("q" to q),
+        )
+        return suggestionsFrom(d["searchSuggestions"].obj)
+    }
+
+    /** Vorschläge aus der Antwort von [suggestions] (öffentlich für Tests). */
+    fun suggestionsFrom(conn: JsonObject?): List<TwitchSuggestion> {
+        val out = LinkedHashMap<String, TwitchSuggestion>()
+        for (e in conn.edges()) {
+            val n = e["node"].obj ?: continue
+            val text = n["text"].str?.trim().orEmpty()
+            if (text.isEmpty()) continue
+            val m = n["matchingCharacters"].obj
+            val start = m?.get("start").long?.toInt()
+            val end = m?.get("end").long?.toInt()
+            val match = if (start != null && end != null && start >= 0 && end > start && end <= text.length) start until end else null
+            val c = n["content"].obj
+            val s = when (c?.get("__typename").str) {
+                "SearchSuggestionChannel" -> {
+                    val user = c?.get("user").obj
+                    val login = (c?.get("login").str ?: user?.get("login").str)?.lowercase()
+                    if (login == null || !LOGIN.matches(login)) continue
+                    val u = buildJsonObject {
+                        user?.forEach { (k, v) -> put(k, v) }
+                        put("login", login)
+                        if (user?.get("profileImageURL") == null) put("profileImageURL", c?.get("profileImageURL") ?: JsonNull)
+                    }
+                    TwitchSuggestion(text, match, channel = channel(u)?.copy(name = user?.get("displayName").str ?: text), verified = c?.get("isVerified").str == "true")
+                }
+                "SearchSuggestionCategory" -> TwitchSuggestion(text, match, game = game(c?.get("game").obj) ?: continue)
+                else -> TwitchSuggestion(text, match)
+            }
+            out.putIfAbsent(s.key, s)
+        }
+        return out.values.toList()
     }
 
     private const val CHANNEL_QUERY = "query(\$login: String!, \$after: Cursor) { user(login: \$login) {" +

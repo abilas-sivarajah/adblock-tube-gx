@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -31,12 +32,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.outlined.NorthWest
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -52,16 +57,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -78,6 +90,8 @@ import de.abilas.gxtube.twitch.TwitchChannel
 import de.abilas.gxtube.twitch.TwitchFavorites
 import de.abilas.gxtube.twitch.TwitchFollows
 import de.abilas.gxtube.twitch.TwitchGame
+import de.abilas.gxtube.twitch.TwitchSearch
+import de.abilas.gxtube.twitch.TwitchSuggestion
 import de.abilas.gxtube.ui.LocalNav
 import de.abilas.gxtube.ui.components.AppTopBar
 import de.abilas.gxtube.ui.components.Avatar
@@ -96,6 +110,7 @@ import de.abilas.gxtube.ui.theme.Yt
 import de.abilas.gxtube.util.Fmt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Twitch-Lila */
@@ -625,37 +640,78 @@ fun TwitchFollowingScreen(vm: TwitchFollowingViewModel = viewModel()) {
 // ------------------------------------------------------------ Suche
 
 class TwitchSearchViewModel(initial: String) : ViewModel() {
-    var field by mutableStateOf(initial)
+    var field by mutableStateOf(TextFieldValue(initial, TextRange(initial.length)))
+        private set
     var submitted by mutableStateOf<String?>(initial.ifBlank { null })
         private set
-    var channels by mutableStateOf<List<TwitchChannel>>(emptyList())
+    var suggestions by mutableStateOf<List<TwitchSuggestion>>(emptyList())
         private set
-    var games by mutableStateOf<List<TwitchGame>>(emptyList())
+    var result by mutableStateOf<TwitchSearch?>(null)
         private set
     var loading by mutableStateOf(false)
         private set
     var error by mutableStateOf<String?>(null)
         private set
+
+    /** Kanäle: gezeigt (erst die wichtigsten), geladen (auch weitere Seiten von Twitch), nächste Seite. */
+    var channels by mutableStateOf<List<TwitchChannel>>(emptyList())
+        private set
+    var shownChannels by mutableStateOf(0)
+        private set
+    var loadingMore by mutableStateOf(false)
+        private set
+    private var next by mutableStateOf<String?>(null)
+    val moreChannels get() = shownChannels < channels.size || next != null
+
+    /** Live-Kanäle mit passendem Tag: so viele sind aufgeklappt. */
+    var shownLive by mutableStateOf(LIVE_FIRST)
+        private set
+
     private var job: Job? = null
+    private var moreJob: Job? = null
+    private var suggestJob: Job? = null
 
     init {
         submitted?.let { submit(it) }
     }
 
+    fun onChange(value: TextFieldValue) {
+        val changed = value.text != field.text
+        field = value
+        if (!changed) return
+        suggestJob?.cancel()
+        val q = value.text
+        suggestJob = viewModelScope.launch {
+            delay(180)
+            suggestions = if (q.isBlank()) emptyList() else runCatching { TwitchApi.suggestions(q) }.getOrElse { if (it is CancellationException) throw it else emptyList() }
+        }
+    }
+
     fun submit(query: String) {
         val q = query.trim()
         if (q.isEmpty()) return
-        field = q
+        // Noch laufende Vorschläge verwerfen, sonst legen sie sich über die Ergebnisse
+        suggestJob?.cancel()
+        suggestions = emptyList()
+        field = TextFieldValue(q, TextRange(q.length))
         submitted = q
         Library.addSearch(q)
         job?.cancel()
+        moreJob?.cancel()
+        loadingMore = false
+        result = null
+        channels = emptyList()
+        next = null
         job = viewModelScope.launch {
             loading = true
             error = null
             try {
                 val r = TwitchApi.search(q)
+                result = r
                 channels = r.channels
-                games = r.games
+                next = r.next
+                shownChannels = CHANNELS_FIRST
+                shownLive = LIVE_FIRST
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
@@ -664,6 +720,44 @@ class TwitchSearchViewModel(initial: String) : ViewModel() {
                 loading = false
             }
         }
+    }
+
+    /** "Mehr anzeigen" bei den Kanälen: erst die schon geladenen, dann die nächste Seite von Twitch. */
+    fun showMoreChannels() {
+        if (shownChannels < channels.size) {
+            shownChannels += CHANNELS_STEP
+            return
+        }
+        val cursor = next ?: return
+        val q = submitted ?: return
+        if (moreJob?.isActive == true) return
+        moreJob = viewModelScope.launch {
+            loadingMore = true
+            try {
+                val page = TwitchApi.searchChannels(q, cursor)
+                val have = channels.map { it.login }.toSet()
+                channels = channels + page.items.filterNot { it.login in have }
+                next = page.next
+                shownChannels += CHANNELS_STEP
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                // Twitch will gerade nicht: keine weiteren Seiten anbieten, die Ergebnisse bleiben stehen
+                next = null
+            } finally {
+                loadingMore = false
+            }
+        }
+    }
+
+    fun showMoreLive() {
+        shownLive += 10
+    }
+
+    private companion object {
+        const val CHANNELS_FIRST = 5
+        const val CHANNELS_STEP = 15
+        const val LIVE_FIRST = 3
     }
 }
 
@@ -674,6 +768,8 @@ fun TwitchSearchScreen(initial: String) {
     val lib by Library.data.collectAsStateWithLifecycle()
     val focus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    var focused by remember { mutableStateOf(false) }
+    val editing = focused && (vm.submitted == null || vm.field.text != vm.submitted)
     LaunchedEffect(Unit) { if (vm.submitted == null) focus.requestFocus() }
 
     fun doSubmit(q: String) {
@@ -705,61 +801,199 @@ fun TwitchSearchScreen(initial: String) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(Modifier.weight(1f)) {
-                    if (vm.field.isEmpty()) Text("Auf Twitch suchen", color = Yt.colors.textSecondary, fontSize = 16.sp)
+                    if (vm.field.text.isEmpty()) Text("Auf Twitch suchen", color = Yt.colors.textSecondary, fontSize = 16.sp)
                     BasicTextField(
                         value = vm.field,
-                        onValueChange = { vm.field = it },
+                        onValueChange = { vm.onChange(it) },
                         singleLine = true,
                         textStyle = TextStyle(color = Yt.colors.text, fontSize = 16.sp),
                         cursorBrush = SolidColor(Yt.colors.text),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { doSubmit(vm.field) }),
+                        keyboardActions = KeyboardActions(onSearch = { doSubmit(vm.field.text) }),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .focusRequester(focus),
+                            .focusRequester(focus)
+                            .onFocusChanged { focused = it.isFocused },
                     )
                 }
-                if (vm.field.isNotEmpty()) {
+                if (vm.field.text.isNotEmpty()) {
                     IconButton(onClick = {
-                        vm.field = ""
+                        vm.onChange(TextFieldValue(""))
                         focus.requestFocus()
                     }) { Icon(Icons.Filled.Close, "Leeren", tint = Yt.colors.text) }
                 }
             }
         }
 
-        LazyColumn(contentPadding = PaddingValues(bottom = 80.dp), modifier = Modifier.fillMaxSize()) {
-            if (vm.submitted == null) {
-                items(lib.searchHistory.take(10), key = { "h-$it" }) { h ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { doSubmit(h) }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+        // Beim Tippen: frühere Suchen und Vorschläge von Twitch (Kanäle, Kategorien, Suchbegriffe)
+        if (editing || vm.submitted == null) {
+            val q = vm.field.text.trim()
+            val history = lib.searchHistory.filter { q.isEmpty() || it.contains(q, ignoreCase = true) }.take(if (q.isEmpty()) 10 else 3)
+            val remote = vm.suggestions.filterNot { s -> s.channel == null && s.game == null && history.any { it.equals(s.text, true) } }
+            LazyColumn(contentPadding = PaddingValues(bottom = 80.dp), modifier = Modifier.fillMaxSize()) {
+                items(history, key = { "h-$it" }) { h ->
+                    SuggestionLine(
+                        leading = { Icon(Icons.Outlined.History, null, tint = Yt.colors.text) },
+                        text = AnnotatedString(h),
+                        onClick = { doSubmit(h) },
                     ) {
-                        Icon(Icons.Outlined.History, null, tint = Yt.colors.textSecondary)
-                        Spacer(Modifier.width(16.dp))
-                        Text(h, color = Yt.colors.text, fontSize = 16.sp)
+                        IconButton(onClick = { Library.removeSearch(h) }) { Icon(Icons.Filled.Close, "Aus Suchverlauf entfernen", tint = Yt.colors.textSecondary) }
+                        IconButton(onClick = { vm.onChange(TextFieldValue(h, TextRange(h.length))) }) { Icon(Icons.Outlined.NorthWest, "Übernehmen", tint = Yt.colors.text) }
                     }
                 }
-                return@LazyColumn
+                items(remote, key = { "s-" + it.key }) { s -> TwitchSuggestionLine(s, onSearch = { doSubmit(it) }, onFill = { vm.onChange(TextFieldValue("$it ", TextRange(it.length + 1))) }) }
             }
+            return@Column
+        }
+
+        val r = vm.result
+        LazyColumn(contentPadding = PaddingValues(bottom = 80.dp), modifier = Modifier.fillMaxSize()) {
             when {
                 vm.loading -> item { LoadingBox(Modifier.padding(top = 60.dp)) }
                 vm.error != null -> item { ErrorBox(vm.error.orEmpty(), onRetry = { vm.submitted?.let { doSubmit(it) } }) }
-                vm.channels.isEmpty() && vm.games.isEmpty() -> item { ErrorBox("Keine Ergebnisse", onRetry = null) }
+                r == null || (r.channels.isEmpty() && r.games.isEmpty() && r.live.isEmpty() && r.videos.isEmpty()) -> item { ErrorBox("Keine Ergebnisse", onRetry = null) }
             }
-            if (!vm.loading && vm.games.isNotEmpty()) {
+            if (vm.loading || r == null) return@LazyColumn
+            if (r.games.isNotEmpty()) {
                 item(key = "games-head") { SectionHeader("Kategorien") }
-                item(key = "games") { GameRow(vm.games) }
+                item(key = "games") { GameRow(r.games) }
             }
-            if (!vm.loading && vm.channels.isNotEmpty()) {
+            if (vm.channels.isNotEmpty()) {
                 item(key = "channels-head") { SectionHeader("Kanäle") }
-                items(vm.channels, key = { "c-" + it.login }) { c ->
+                items(vm.channels.take(vm.shownChannels), key = { "c-" + it.login }) { c ->
                     TwitchChannelRow(c) { c.live?.let { nav.openVideo(it) } ?: nav.openTwitchChannel(c.login) }
                 }
+                if (vm.moreChannels) item(key = "channels-more") { ShowMoreRow(loading = vm.loadingMore) { vm.showMoreChannels() } }
             }
+            if (r.live.isNotEmpty()) {
+                item(key = "live-head") { SectionHeader(r.tag?.let { "Live mit dem Tag „$it“" } ?: "Live-Kanäle zu „${vm.submitted}“") }
+                items(r.live.take(vm.shownLive), key = { "l-" + it.id }) { v -> VideoCard(v, onClick = { nav.openVideo(v) }) }
+                if (vm.shownLive < r.live.size) item(key = "live-more") { ShowMoreRow { vm.showMoreLive() } }
+            }
+            if (r.videos.isNotEmpty()) {
+                item(key = "videos-head") { SectionHeader("Vergangene Videos") }
+                items(r.videos, key = { "v-" + it.id }) { v -> VideoRow(v, onClick = { nav.openVideo(v) }) }
+            }
+        }
+    }
+}
+
+/** "Mehr anzeigen" als Trennlinie mit Knopf in der Mitte (wie auf twitch.tv). */
+@Composable
+private fun ShowMoreRow(loading: Boolean = false, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        HorizontalDivider(Modifier.weight(1f), color = Yt.colors.divider)
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .clickable(enabled = !loading, onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(if (loading) "Lädt …" else "Mehr anzeigen", color = TwitchPurpleLight, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Icon(Icons.Filled.KeyboardArrowDown, null, tint = TwitchPurpleLight, modifier = Modifier.size(20.dp))
+        }
+        HorizontalDivider(Modifier.weight(1f), color = Yt.colors.divider)
+    }
+}
+
+/** Heller als [TwitchPurple] – gut lesbar auf hellem und dunklem Grund. */
+private val TwitchPurpleLight = Color(0xFFA970FF)
+
+/** Text mit dem getippten Teil fett (Twitch liefert die Stelle mit). */
+private fun highlighted(text: String, match: IntRange?): AnnotatedString = buildAnnotatedString {
+    if (match == null) {
+        append(text)
+        return@buildAnnotatedString
+    }
+    append(text.substring(0, match.first))
+    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(text.substring(match.first, match.last + 1)) }
+    append(text.substring(match.last + 1))
+}
+
+/** Eine Zeile in der Vorschlagsliste: Bild/Symbol, Text (+ Unterzeile), Knöpfe rechts. */
+@Composable
+private fun SuggestionLine(
+    leading: @Composable () -> Unit,
+    text: AnnotatedString,
+    sub: String? = null,
+    verified: Boolean = false,
+    onClick: () -> Unit,
+    trailing: @Composable () -> Unit = {},
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp)
+            .clickable(onClick = onClick)
+            .padding(start = 16.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(32.dp), contentAlignment = Alignment.Center) { leading() }
+        Spacer(Modifier.width(16.dp))
+        Column(
+            Modifier
+                .weight(1f)
+                .padding(vertical = 8.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text, color = Yt.colors.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                if (verified) Icon(Icons.Filled.Verified, "Verifiziert", tint = TwitchPurpleLight, modifier = Modifier.padding(start = 4.dp).size(16.dp))
+            }
+            if (sub != null) Text(sub, color = Yt.colors.textSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        trailing()
+    }
+}
+
+/**
+ * Vorschlag von Twitch: Kanal (live → gleich abspielen, sonst Kanalseite), Kategorie (öffnen)
+ * oder Suchbegriff (suchen; Pfeil übernimmt ihn ins Feld).
+ */
+@Composable
+private fun TwitchSuggestionLine(s: TwitchSuggestion, onSearch: (String) -> Unit, onFill: (String) -> Unit) {
+    val nav = LocalNav.current
+    val c = s.channel
+    val g = s.game
+    when {
+        c != null -> {
+            val live = c.live
+            SuggestionLine(
+                leading = { Avatar(c.avatar, c.name, 32.dp, if (live != null) Modifier.border(2.dp, Color(0xFFEB0400), CircleShape) else Modifier) },
+                text = highlighted(s.text, s.match),
+                sub = live?.let { Fmt.joinDot("🔴 Live", it.game, Fmt.watching(it.viewCount)) },
+                verified = s.verified,
+                onClick = { if (live != null) nav.openVideo(live) else nav.openTwitchChannel(c.login) },
+            )
+        }
+        g != null -> SuggestionLine(
+            leading = {
+                AsyncImage(
+                    model = g.boxArt,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .width(24.dp)
+                        .aspectRatio(3f / 4f)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(Yt.colors.chip),
+                )
+            },
+            text = highlighted(s.text, s.match),
+            sub = Fmt.joinDot("Kategorie", g.viewers.takeIf { it >= 0 }?.let { Fmt.watching(it) }),
+            onClick = { nav.openTwitchCategory(g.name) },
+        )
+        else -> SuggestionLine(
+            leading = { Icon(Icons.Outlined.Search, null, tint = Yt.colors.text) },
+            text = highlighted(s.text, s.match),
+            onClick = { onSearch(s.text) },
+        ) {
+            IconButton(onClick = { onFill(s.text) }) { Icon(Icons.Outlined.NorthWest, "Übernehmen", tint = Yt.colors.text) }
         }
     }
 }
