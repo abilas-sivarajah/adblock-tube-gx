@@ -91,8 +91,9 @@ Protokoll: [PROTOCOL.md](https://github.com/abilas-sivarajah/adblock-tube-gx-des
 - **Werbung:** Twitch schneidet die Werbung in den Stream. Der Werbeblocker aus AdBlock GX (hier in Kotlin für
   ExoPlayer) überspringt eine Werbepause: Der Stream läuft über eine zweite, werbefreie Twitch-Sitzung weiter –
   sofort in 360p (zwei getrennte Sitzungen als Android- und iOS-App), dann wieder in voller Qualität – und kehrt
-  danach zum eigenen Stream zurück. Nur wenn Twitch in allen Sitzungen Werbung zeigt, läuft für die Dauer der
-  Werbung ein schwarzes Bild („Twitch zeigt gerade überall Werbung“).
+  danach zum eigenen Stream zurück: sobald dort wieder Live-Stücke kommen, auch wenn Twitch die Werbung noch
+  minutenlang in der Playlist stehen lässt (nach einer Start-Werbung). Nur wenn Twitch in allen Sitzungen
+  Werbung zeigt, läuft für die Dauer der Werbung ein schwarzes Bild („Twitch zeigt gerade überall Werbung“).
   Zuerst wird die Werbung per Ad-Spoofing als „gesehen“ gemeldet – oft endet die Pause dann sofort ohne Wechsel.
   Abschaltbar unter Einstellungen → Twitch („Werbung als gesehen melden“).
 - **Chat:** Mitlesen geht ohne Konto. Zum **Schreiben** unter Einstellungen → Twitch (oder direkt im Chat)
@@ -128,6 +129,7 @@ cd adblock-tube-gx
 ./gradlew testDebugUnitTest    # Unit-Tests
 GXTUBE_ONLINE_TESTS=1 ./gradlew testDebugUnitTest --tests '*OnlineSmokeTest'   # prüft gegen echtes YouTube
 GXTUBE_ONLINE_TESTS=1 ./gradlew testDebugUnitTest --tests '*TwitchAdBlockTest'  # Werbeblocker mit echtem Twitch-Stream
+GXTUBE_ONLINE_TESTS=1 ./gradlew testDebugUnitTest --tests '*TwitchAdBreakOnlineTest'  # stellt Werbepausen auf echten Streams nach (MPEG-TS und fMP4, ohne Player)
 ```
 
 **Signierung:** Ohne weitere Angaben wird mit `signing/gxtube.jks` signiert (liegt bewusst im Repo,

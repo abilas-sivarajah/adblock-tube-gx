@@ -22,6 +22,7 @@ import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import kotlin.math.abs
@@ -43,7 +44,8 @@ import kotlin.random.Random
  *    360p-Brücke ("autoplay" als Android, sonst "picture-by-picture" als iOS), volle Qualität, sobald
  *    eine Sitzung zweimal (1,5 s auseinander) frei war. Liegt die Ersatz-Sitzung ein paar Sekunden
  *    zurück, wird trotzdem sofort gewechselt (kurz doppelt statt schwarz) – die Werbung wird übersprungen.
- *  - Ist die eigene Sitzung drei Aktualisierungen lang frei, geht es dorthin zurück.
+ *  - Sobald am Ende der eigenen Playlist wieder Live-Stücke liegen, geht es dorthin zurück – auch wenn
+ *    Twitch die Werbestücke noch im Fenster stehen lässt (nach einer Start-Werbung minutenlang).
  *  - Alles läuft auf einer Zeitleiste: Segmentnummern steigen nur, ein Quellwechsel ist eine
  *    Diskontinuität, ausgerichtet nach EXT-X-PROGRAM-DATE-TIME (nichts doppelt, nichts übersprungen).
  *  - Sobald Werbung in der eigenen Sitzung auftaucht, wird zuerst per Ad-Spoofing (`RecordAdEvent`)
@@ -85,6 +87,9 @@ class TwitchAdBlock(
         const val STALLED = 10000L
         const val HQ_DWELL = 8000L
         const val NATIVE_CLEAN = 3
+        const val NATIVE_TAIL = 2 // ... oder so viele Live-Stücke hinter der Werbung, solange sie noch im Fenster steht
+        const val BRIDGE_WAIT = 2500L // länger wartet der Player nicht auf die 360p-Brücken (die erste werbefreie gewinnt)
+        const val SPOOF_WAIT = 1500L // länger wartet der Player nicht auf das Melden der Werbung
     }
 
     private val http = client.newBuilder().callTimeout(T.FETCH, TimeUnit.MILLISECONDS).build()
@@ -249,7 +254,10 @@ class TwitchAdBlock(
 
     private class Ctx(val key: String, val login: String?, val vod: String?) {
         val sessions = ConcurrentHashMap<String, Session>()
-        val spoofedAdIds = HashSet<String>()
+        /** Gemeldete Werbung – das Melden kann im Hintergrund weiterlaufen, während der Player schon weiter ist */
+        val spoofedAdIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
+        /** 360p-Brücken, deren Anfrage noch läuft (hängt eine, wird sie nicht bei jeder Aktualisierung neu gefragt) */
+        val lqBusy: MutableSet<String> = ConcurrentHashMap.newKeySet()
         val lock = Any()
         var gen = 0
         var tl = Timeline("native:0")
@@ -483,8 +491,11 @@ class TwitchAdBlock(
         // 1. PRIMÄR: Ad-Spoofing versuchen, sobald Werbung in der eigenen Sitzung auftaucht.
         // Wenn Twitch nach dem Spoofing (RecordAdEvent) die Werbung sofort aus der eigenen Playlist
         // entfernt, läuft der Original-Stream ohne Qualitätswechsel direkt weiter.
-        if (natAds && adSpoofing) {
-            if (notifyAdComplete(ctx, curText)) {
+        // Nur solange die Werbung am Live-Ende läuft (nicht für alte Werbestücke weiter oben im Fenster),
+        // und der Player wartet darauf höchstens T.SPOOF_WAIT – die Meldung läuft sonst im Hintergrund weiter.
+        if (natAds && adSpoofing && nat.segs.last().ad) {
+            val adText = curText
+            if (within(scanner.submit<Boolean> { notifyAdComplete(ctx, adText) }, T.SPOOF_WAIT) == true) {
                 runCatching {
                     val freshText = fetchText(url)
                     val freshNat = parseMedia(freshText, url)
@@ -516,9 +527,13 @@ class TwitchAdBlock(
                 return out
             }
         }
-        // Werbung im oberen Teil des HLS-Fensters ist schon vorbei und am Live-Ende liegen wieder Live-Stücke
-        if (natAds && tl.source == nid && nat.segs.any { it.ad } && !nat.segs.last().ad) {
+        // Die Werbung ist vorbei – am Live-Ende liegen wieder Live-Stücke –, steht aber noch im HLS-Fenster
+        // (nach einer Start-Werbung minutenlang): Der Player bekommt gleich wieder die eigene Sitzung, ohne
+        // die Werbestücke. Vorher blieb er auf der Ersatz-Sitzung (oft 360p), bis das Fenster ganz sauber war.
+        if (natAds && adOver(nat, curText, if (tl.source == nid) 1 else T.NATIVE_TAIL)) {
+            val from = typeOf(tl.source)
             serve(ctx, url, nid, nat, strip = true)?.let { out ->
+                if (from != null) Log.i(TAG, "Werbung vorbei: zurück zur eigenen Sitzung (von $from)")
                 setBridge(ctx, false)
                 endAd(ctx)
                 return out
@@ -541,9 +556,17 @@ class TwitchAdBlock(
         }
 
         // Sonst / besser: sofort die 360p-Brücke, volle Qualität, sobald sie sich als frei erwiesen hat
-        val lqF: List<Future<Backup?>> = if (curOk) emptyList() else LQ_TYPES.filter { it != curType }.map { type ->
-            scanner.submit<Backup?> { backupPlaylist(ctx, type, want, true) }
-        }
+        val lqF = if (curOk) null else race(
+            LQ_TYPES.filter { it != curType && ctx.lqBusy.add(it) }.map { type ->
+                {
+                    try {
+                        backupPlaylist(ctx, type, want, true)
+                    } finally {
+                        ctx.lqBusy.remove(type)
+                    }
+                }
+            },
+        )
         var hq: Backup? = null
         if (!curOk || cur!!.lq) {
             hq = provenHq(ctx, want, curType)
@@ -554,7 +577,8 @@ class TwitchAdBlock(
                 if (hq != null && hq.ads) hq = null
             }
         }
-        val lqs = lqF.mapNotNull { f -> runCatching { f.get(T.FETCH * 2, TimeUnit.MILLISECONDS) }.getOrNull() }.filter { !it.ads }
+        // Die erste werbefreie Brücke gewinnt: Eine langsame darf die Anfrage des Players nicht aufhalten
+        val lqs = lqF?.firstGood(T.BRIDGE_WAIT) { !it.ads }.orEmpty().filter { !it.ads }
         val picks = ArrayList<Backup>()
         if (curOk && !cur!!.lq) picks += cur
         if (hq != null && hq.proven) picks += hq
@@ -614,10 +638,11 @@ class TwitchAdBlock(
     private fun trackNative(ctx: Ctx, nat: Media, ads: Boolean) {
         val lastSeq = nat.segs.last().seq
         if (ads) ctx.cleanStreak = 0
-        else {
-            if (ctx.natLastSeq == null || lastSeq > ctx.natLastSeq!!) ctx.cleanStreak++ // nur neue Playlists zählen
-            ctx.fmp4 = nat.segs.any { it.map != null }
-        }
+        else if (ctx.natLastSeq == null || lastSeq > ctx.natLastSeq!!) ctx.cleanStreak++ // nur neue Playlists zählen
+        // fMP4 oder MPEG-TS? Das sagen die Live-Stücke (Werbung kann als fMP4 in einem MPEG-TS-Stream kommen) –
+        // auch solange eine Werbung, die vorbei ist, noch im Fenster steht: Sonst blieb das Format minutenlang offen
+        val live = nat.segs.filter { !it.ad }
+        if (live.isNotEmpty()) ctx.fmp4 = live.any { it.map != null }
         ctx.natLastSeq = lastSeq
     }
 
@@ -669,6 +694,45 @@ class TwitchAdBlock(
         null
     } catch (_: Exception) {
         null
+    }
+
+    /** Mehrere Anfragen, die gleichzeitig laufen ([race]). */
+    private class Race<R : Any>(private val count: Int, private val done: LinkedBlockingQueue<List<R>>) {
+        /**
+         * Die Ergebnisse, die da sind, sobald das erste gute eintrifft (oder alle fertig sind, oder [ms] um sind).
+         * Eine langsame Anfrage hält die anderen nicht auf; sie läuft im Hintergrund zu Ende.
+         */
+        fun firstGood(ms: Long, good: (R) -> Boolean): List<R> {
+            val got = ArrayList<R>()
+            val deadline = System.nanoTime() + ms * 1_000_000
+            repeat(count) {
+                val r = done.poll(deadline - System.nanoTime(), TimeUnit.NANOSECONDS) ?: return got
+                got += r
+                if (r.any(good)) return got
+            }
+            return got
+        }
+    }
+
+    private fun <R : Any> race(tasks: List<() -> R?>): Race<R> {
+        val done = LinkedBlockingQueue<List<R>>()
+        tasks.forEach { task -> scanner.execute { done.put(listOfNotNull(runCatching(task).getOrNull())) } }
+        return Race(tasks.size, done)
+    }
+
+    /**
+     * Ist die Werbung in dieser Playlist vorbei? Am Ende liegen wieder Live-Stücke (mindestens [need]),
+     * hinter den Werbestücken – oder, wenn nur noch die Markierung der Werbung im Fenster steht, hinter
+     * deren Endzeit. Nach einer Start-Werbung lässt Twitch Werbestücke und Markierung minutenlang stehen.
+     */
+    private fun adOver(p: Media, text: String, need: Int): Boolean {
+        val segs = p.segs
+        val live = segs.size - 1 - segs.indexOfLast { it.ad }
+        if (live < max(1, need)) return false
+        if (live < segs.size) return true
+        val end = adEndsAt(text) ?: return false
+        val first = segs[0].pdt ?: return false
+        return first >= end - 1000
     }
 
     // ------------------------------------------------------------ Ersatz-Sitzungen
@@ -1033,6 +1097,22 @@ class TwitchAdBlock(
         }
 
         fun isAdLine(line: String) = line.startsWith("#") && (AD_TEXT.containsMatchIn(line) || isAdMarker(line))
+
+        private val AD_START = Regex("START-DATE=\"([^\"]+)\"")
+        private val AD_DURATION = Regex("[,:]DURATION=([\\d.]+)")
+        private val AD_POD_DURATION = Regex("AD-POD-FILLED-DURATION=\"([\\d.]+)\"")
+
+        /** Wann endet die Werbepause? (START-DATE + DURATION der stitched-ad-Markierungen) – null: unbekannt. */
+        fun adEndsAt(text: String): Long? {
+            var end = 0L
+            for (line in text.lineSequence()) {
+                if (!line.startsWith("#EXT-X-DATERANGE") || !line.contains("stitched-ad")) continue
+                val start = AD_START.find(line)?.groupValues?.get(1)?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() } ?: continue
+                val dur = (AD_DURATION.find(line) ?: AD_POD_DURATION.find(line))?.groupValues?.get(1)?.toDoubleOrNull() ?: continue
+                end = max(end, start + (dur * 1000).toLong())
+            }
+            return end.takeIf { it > 0 }
+        }
 
         fun hasAds(text: String): Boolean {
             if (AD_TEXT.containsMatchIn(text)) return true
