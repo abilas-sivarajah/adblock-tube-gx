@@ -48,7 +48,7 @@ Voraussetzung: Android 8.0 oder neuer.
 | **Du** | Verlauf mit rotem Fortschrittsbalken („Weiter ansehen“), Später ansehen, Videos mit „Mag ich“ |
 | **Google-Konto (freiwillig)** | Anmelden unter **Du → Mit Google anmelden**: deine echte YouTube-Startseite, Abos aus dem Konto, Verlauf / Später ansehen / „Mag ich“ von YouTube; Abonnieren, Liken und Speichern landen im Konto. Videos laufen trotzdem ohne Werbung. |
 | **Auf PC streamen** | Wie „Auf dem Fernseher abspielen“ bei YouTube: oben auf das Streamen-Symbol tippen, PC auswählen – Videos laufen dann werbefrei auf dem PC mit [GX Tube Desktop](https://github.com/abilas-sivarajah/adblock-tube-gx-desktop). Das Handy wird zur Fernbedienung (Pause, Springen, Weiter, Lautstärke über die Lautstärketasten, Warteschlange „Als Nächstes abspielen“), auch aus der Benachrichtigung und dem Sperrbildschirm. Siehe unten. |
-| **Twitch** | Umschalter oben (YouTube \| Twitch): Startseite mit gefolgten Live-Kanälen, beliebten Streams (Deutsch/Englisch/alle) und Kategorien, Tab **„Folge ich“**, **Favoriten** mit Stern (eigene Rubrik ganz oben auf der Startseite und unter „Folge ich“, nur auf dem Handy), **Suche wie auf twitch.tv** (Vorschläge beim Tippen: Kanäle mit Bild – live mit Spiel und Zuschauern –, Kategorien und Suchbegriffe; Ergebnisse mit Kategorien, Kanälen, Live-Kanälen mit passendem Tag wie „deutsch“ und vergangenen Videos), Kanalseiten mit VODs, **Chat** unter Live-Streams (mit 7TV-, BTTV- und FFZ-Emotes), Qualität wählbar, **ohne Werbung** (siehe unten), auch **auf den PC streamen** |
+| **Twitch** | Umschalter oben (YouTube \| Twitch): Startseite mit gefolgten Live-Kanälen, beliebten Streams (Deutsch/Englisch/alle) und Kategorien, Tab **„Folge ich“**, **Favoriten** mit Stern (eigene Rubrik ganz oben auf der Startseite und unter „Folge ich“, nur auf dem Handy), **Suche wie auf twitch.tv** (Vorschläge beim Tippen: Kanäle mit Bild – live mit Spiel und Zuschauern –, Kategorien und Suchbegriffe; Ergebnisse mit Kategorien, Kanälen, Live-Kanälen mit passendem Tag wie „deutsch“ und vergangenen Videos), Kanalseiten mit VODs und **Clips**, **Chat** unter Live-Streams wie in der Twitch-App (Befehle, Antworten, Emote-Auswahl, siehe unten), **Chat-Wiedergabe** bei VODs, eigener Suchverlauf, Qualität wählbar, **ohne Werbung** (siehe unten), auch **auf den PC streamen** |
 | **Links öffnen** | YouTube-Links aus anderen Apps über „Teilen → GX Tube“ öffnen (auch `youtu.be`, Shorts, Kanäle, Playlists, `?t=` Zeitstempel) |
 | **Design** | Wie die YouTube-App, hell/dunkel (folgt dem System oder fest einstellbar) |
 
@@ -109,6 +109,11 @@ Protokoll: [PROTOCOL.md](https://github.com/abilas-sivarajah/adblock-tube-gx-des
   Chat-Modi (langsam, nur Follower/Abos/Emotes) stehen oben, im langsamen Modus läuft ein Countdown. Beim Öffnen
   kommen die letzten Nachrichten (über recent-messages.robotty.de, abschaltbar), optional mit Uhrzeit.
   Im **Querformat** zeigt der Chat-Knopf oben im Player den Chat rechts neben dem Video.
+- **Chat-Wiedergabe bei VODs:** Unter vergangenen Streams läuft der Chat passend zur Stelle im Video mit
+  (Reiter „Chat-Wiedergabe“ | „Weitere Videos“, im Querformat neben dem Video).
+- **Clips:** Reiter „Clips“ auf jeder Kanalseite (24 Stunden, 7 Tage, 30 Tage, alle). „Ganzen Stream ansehen“
+  springt an die Stelle im VOD. Geteilte Clip-Links (`clips.twitch.tv/…`) öffnen direkt.
+- **Suchverlauf:** Twitch hat einen eigenen Suchverlauf, getrennt von YouTube.
   Für die Mod- und Streamer-Befehle braucht GX Tube mehr Rechte als früher: wer vorher angemeldet war, meldet sich
   dafür einmal ab und neu an.
 - **Folgen** speichert den Kanal auf dem Handy, angemeldet auch in deinem Twitch-Konto; deine gefolgten
