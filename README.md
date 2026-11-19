@@ -100,6 +100,17 @@ Protokoll: [PROTOCOL.md](https://github.com/abilas-sivarajah/adblock-tube-gx-des
   **bei Twitch anmelden** – wie bei Twitch auf dem Fernseher: „Hier in der App anmelden“ (der Code ist schon
   eingetragen) oder auf einem anderen Gerät `twitch.tv/activate` öffnen und den Code eingeben.
   GX Tube bekommt dein Passwort nie; das Token bleibt nur auf dem Handy (`files/twitch-account.json`).
+- **Chat wie in der Twitch-App:** Abzeichen als Bilder, Emotes von Twitch, 7TV, BTTV und FFZ, **Emote-Auswahl**
+  (Smiley-Knopf), **Antworten** auf Nachrichten, **@-Erwähnungen** mit Namensvorschlägen beim Tippen, `:kek` schlägt
+  Emotes vor, **`/`-Befehle** mit Vorschlägen und Erklärung (`/me`, `/color`, `/w`, `/block` …, für Moderatoren
+  `/ban`, `/timeout`, `/slow`, `/announce`, `/shoutout` …, für Streamer `/raid`, `/mod`, `/vip`, `/marker` …).
+  Nachricht antippen → **Profilkarte** (Konto-Alter, Erwähnen, Flüstern, Kopieren, Nachrichten des Nutzers, als Mod
+  löschen/Timeout/Bann). Links sind antippbar, Ankündigungen, Abos, Raids und erste Nachrichten sind hervorgehoben,
+  Chat-Modi (langsam, nur Follower/Abos/Emotes) stehen oben, im langsamen Modus läuft ein Countdown. Beim Öffnen
+  kommen die letzten Nachrichten (über recent-messages.robotty.de, abschaltbar), optional mit Uhrzeit.
+  Im **Querformat** zeigt der Chat-Knopf oben im Player den Chat rechts neben dem Video.
+  Für die Mod- und Streamer-Befehle braucht GX Tube mehr Rechte als früher: wer vorher angemeldet war, meldet sich
+  dafür einmal ab und neu an.
 - **Folgen** speichert den Kanal auf dem Handy, angemeldet auch in deinem Twitch-Konto; deine gefolgten
   Kanäle aus dem Konto kommen beim Anmelden dazu.
 - **Auf den PC streamen** geht wie bei YouTube (GX Tube Desktop ab 0.1.18) – der Chat bleibt auf dem Handy.

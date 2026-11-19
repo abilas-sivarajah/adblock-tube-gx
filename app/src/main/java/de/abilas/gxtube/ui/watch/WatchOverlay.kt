@@ -39,6 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import de.abilas.gxtube.ui.twitch.TwitchAdOverlay
 import de.abilas.gxtube.ui.twitch.TwitchWatchDetails
+import de.abilas.gxtube.ui.twitch.ChatPanel
+import de.abilas.gxtube.data.Library
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
@@ -100,18 +106,43 @@ fun WatchOverlay(inPip: Boolean, fullscreen: Boolean) {
     BackHandler(enabled = expanded && !fullscreen) { PlayerController.expanded.value = false }
 
     if (fullscreen) {
-        Box(
+        val lib by Library.data.collectAsStateWithLifecycle()
+        val chatLogin = n.video.twitchLogin ?: n.twitch?.login
+        BoxWithConstraints(
             Modifier
                 .fillMaxSize()
                 .background(Color.Black),
         ) {
-            surface(Modifier.fillMaxSize(), false)
-            PlayerControls(
-                now = n,
-                fullscreen = true,
-                onMinimize = { PlayerController.requestFullscreen(false) },
-                onFullscreen = { PlayerController.requestFullscreen(it) },
-            )
+            // Twitch im Querformat: Chat rechts neben dem Video (abschaltbar über den Knopf oben)
+            val sideChat = chatLogin != null && n.video.isTwitch && n.isLive && !remote && maxWidth > maxHeight &&
+                lib.settings.twitchChat && lib.settings.twitchLandscapeChat
+            val chatWidth = minOf(360.dp, maxWidth * 0.36f)
+            Row(Modifier.fillMaxSize()) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                ) {
+                    surface(Modifier.fillMaxSize(), false)
+                    PlayerControls(
+                        now = n,
+                        fullscreen = true,
+                        onMinimize = { PlayerController.requestFullscreen(false) },
+                        onFullscreen = { PlayerController.requestFullscreen(it) },
+                    )
+                }
+                if (sideChat) {
+                    Box(
+                        Modifier
+                            .width(chatWidth)
+                            .fillMaxHeight()
+                            .background(Yt.colors.background)
+                            .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.End)),
+                    ) {
+                        ChatPanel(chatLogin, Modifier.fillMaxSize(), onClose = { Library.updateSettings { it.copy(twitchLandscapeChat = false) } })
+                    }
+                }
+            }
         }
         return
     }

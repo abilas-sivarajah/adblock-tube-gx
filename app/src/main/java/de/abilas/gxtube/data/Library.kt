@@ -74,6 +74,12 @@ data class Settings(
     val twitchLanguage: String = "de",
     /** Chat unter Twitch-Live-Streams zeigen */
     val twitchChat: Boolean = true,
+    /** Chat im Querformat neben dem Video zeigen (wie in der Twitch-App) */
+    val twitchLandscapeChat: Boolean = false,
+    /** Beim Betreten die letzten Chat-Nachrichten laden (recent-messages.robotty.de) */
+    val twitchChatHistory: Boolean = true,
+    /** Uhrzeit vor Chat-Nachrichten */
+    val twitchChatTimestamps: Boolean = false,
     /** Twitch-Werbung zuerst als gesehen melden (Ad-Spoofing), sonst übernehmen allein die Ersatz-Sitzungen */
     val twitchAdSpoofing: Boolean = true,
     /** Untertitel automatisch einschalten (in [captionLang], "" = erste verfügbare) */

@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.outlined.SpeakerNotesOff
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Fullscreen
@@ -199,6 +201,20 @@ fun PlayerControls(
                         Spacer(Modifier.weight(1f))
                     }
                     CastButton(tint = Color.White)
+                    // Twitch im Querformat: Chat neben dem Video ein-/ausblenden (wie in der Twitch-App)
+                    if (fullscreen && !remote && now.video.isTwitch && now.isLive) {
+                        val chatOn = de.abilas.gxtube.data.Library.data.collectAsStateWithLifecycle().value.settings.let { it.twitchChat && it.twitchLandscapeChat }
+                        IconButton(onClick = {
+                            de.abilas.gxtube.data.Library.updateSettings { it.copy(twitchChat = true, twitchLandscapeChat = !chatOn) }
+                            interaction++
+                        }) {
+                            Icon(
+                                if (chatOn) Icons.AutoMirrored.Outlined.Chat else Icons.Outlined.SpeakerNotesOff,
+                                if (chatOn) "Chat ausblenden" else "Chat einblenden",
+                                tint = Color.White,
+                            )
+                        }
+                    }
                     if (!remote && now.captions.isNotEmpty()) {
                         IconButton(onClick = {
                             // Antippen schaltet um: aus – oder die passendsten Untertitel ein

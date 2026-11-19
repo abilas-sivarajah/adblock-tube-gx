@@ -98,7 +98,15 @@ class TwitchException(message: String, val code: String? = null, val signIn: Boo
 object TwitchApi {
     const val WEB_CLIENT = "kimne78kx3ncx6brgo4mv6wki5h1ko"
     const val TV_CLIENT = "ue6666qo983tsx6so1t0vnawi233wa"
-    const val SCOPES = "chat:read chat:edit user:read:follows user:edit:follows"
+    /** Grundrechte: Chat lesen/schreiben, Folgen. */
+    const val BASE_SCOPES = "chat:read chat:edit user:read:follows user:edit:follows"
+    /** Dazu alles für die /-Befehle im Chat (Moderation, Namensfarbe, Flüstern, Emotes …). */
+    const val SCOPES = BASE_SCOPES +
+        " user:read:emotes user:manage:chat_color user:manage:whispers user:manage:blocked_users" +
+        " moderator:manage:banned_users moderator:manage:chat_messages moderator:manage:chat_settings" +
+        " moderator:manage:announcements moderator:manage:shoutouts moderator:manage:warnings moderator:read:chatters" +
+        " moderation:read channel:manage:moderators channel:manage:vips channel:read:vips channel:manage:raids" +
+        " channel:edit:commercial channel:manage:broadcast"
     private const val GQL = "https://gql.twitch.tv/gql"
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -616,7 +624,7 @@ object TwitchApi {
         val clientId: String = TV_CLIENT,
     )
 
-    data class DeviceCode(val deviceCode: String, val userCode: String, val verificationUrl: String, val expiresAt: Long, val interval: Int) {
+    data class DeviceCode(val deviceCode: String, val userCode: String, val verificationUrl: String, val expiresAt: Long, val interval: Int, val scopes: String = SCOPES) {
         /** Mit schon eingetragenem Code (fürs Anmelden hier in der App). */
         val activateUrl: String get() = verificationUrl + (if ('?' in verificationUrl) "&" else "?") + "device-code=" + URLEncoder.encode(userCode, "UTF-8")
     }
@@ -631,7 +639,15 @@ object TwitchApi {
     }
 
     suspend fun startDeviceLogin(): DeviceCode {
-        val (code, j) = postForm("https://id.twitch.tv/oauth2/device", "client_id" to TV_CLIENT, "scopes" to SCOPES)
+        var scopes = SCOPES
+        var (code, j) = postForm("https://id.twitch.tv/oauth2/device", "client_id" to TV_CLIENT, "scopes" to scopes)
+        // Nimmt Twitch die Rechte für die Chat-Befehle nicht an: mit den Grundrechten anmelden
+        if (j["device_code"].str == null && code in 400..499) {
+            scopes = BASE_SCOPES
+            val retry = postForm("https://id.twitch.tv/oauth2/device", "client_id" to TV_CLIENT, "scopes" to scopes)
+            code = retry.first
+            j = retry.second
+        }
         val deviceCode = j["device_code"].str ?: throw TwitchException("Twitch gibt gerade keinen Code heraus (${j["message"].str ?: code})")
         return DeviceCode(
             deviceCode = deviceCode,
@@ -639,6 +655,7 @@ object TwitchApi {
             verificationUrl = j["verification_uri"].str ?: "https://www.twitch.tv/activate",
             expiresAt = System.currentTimeMillis() + (j["expires_in"].long ?: 1800) * 1000,
             interval = (j["interval"].long ?: 5).toInt(),
+            scopes = scopes,
         )
     }
 
@@ -654,7 +671,7 @@ object TwitchApi {
                     "client_id" to TV_CLIENT,
                     "device_code" to code.deviceCode,
                     "grant_type" to "urn:ietf:params:oauth:grant-type:device_code",
-                    "scopes" to SCOPES,
+                    "scopes" to code.scopes,
                 )
             }.getOrNull() ?: continue
             if (status in 200..299 && j["access_token"].str != null) return tokens(j, null)
