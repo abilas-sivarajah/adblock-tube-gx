@@ -116,6 +116,11 @@ class MainActivity : ComponentActivity() {
         }
         val text = intent?.dataString ?: intent?.getStringExtra(Intent.EXTRA_TEXT) ?: return
         val url = Regex("""https?://\S+""").find(text)?.value ?: text.trim()
+        // Twitch-Clip geteilt (clips.twitch.tv/<slug> bzw. twitch.tv/<kanal>/clip/<slug>)
+        Regex("""https?://(?:clips\.twitch\.tv/(?:embed\?clip=)?|(?:www\.|m\.)?twitch\.tv/[A-Za-z0-9_]{1,25}/clip/)([A-Za-z0-9_-]{1,120})""").find(url)?.let { m ->
+            PlayerController.play(VideoItem(id = "twitch-clip:" + m.groupValues[1], title = ""))
+            return
+        }
         // Twitch-Link geteilt (twitch.tv/<kanal> bzw. twitch.tv/videos/<id>)
         Regex("""https?://(?:www\.|m\.)?twitch\.tv/(?:videos/(\d{1,15})|([A-Za-z0-9_]{1,25}))(?=[/?#]|$)""").find(url)?.let { m ->
             val vod = m.groupValues[1]

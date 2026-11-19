@@ -161,6 +161,21 @@ fun SettingsScreen() {
                 }
             }
             item {
+                SwitchRow("Chat im Querformat", "Den Chat im Vollbild rechts neben dem Video zeigen (auch über den Chat-Knopf im Player)", s.twitchLandscapeChat) {
+                    Library.updateSettings { st -> st.copy(twitchLandscapeChat = it) }
+                }
+            }
+            item {
+                SwitchRow("Letzte Chat-Nachrichten laden", "Beim Öffnen die Nachrichten der letzten Minuten zeigen (über recent-messages.robotty.de)", s.twitchChatHistory) {
+                    Library.updateSettings { st -> st.copy(twitchChatHistory = it) }
+                }
+            }
+            item {
+                SwitchRow("Uhrzeit im Chat", "Vor jeder Chat-Nachricht die Uhrzeit zeigen", s.twitchChatTimestamps) {
+                    Library.updateSettings { st -> st.copy(twitchChatTimestamps = it) }
+                }
+            }
+            item {
                 SwitchRow(
                     "Werbung als gesehen melden",
                     "Ad-Spoofing: meldet Twitch-Werbung sofort als angesehen, damit der Stream ohne Wechsel weiterläuft. Nutzt dein Konto, wenn du angemeldet bist – aus, wenn du das nicht willst; dann übernehmen allein die Ersatz-Sitzungen",
@@ -208,7 +223,7 @@ fun SettingsScreen() {
                 }
             }
             item { ChoiceRow("Wiedergabeverlauf löschen", "${lib.history.size} Einträge") { dialog = "clear-history" } }
-            item { ChoiceRow("Suchverlauf löschen", "${lib.searchHistory.size} Einträge") { Library.clearSearchHistory() } }
+            item { ChoiceRow("Suchverlauf löschen", "${lib.searchHistory.size} bei YouTube, ${lib.twitchSearchHistory.size} bei Twitch") { Library.clearSearchHistory() } }
             item {
                 ChoiceRow("\"Kein Interesse\" zurücksetzen", "${lib.hidden.size} ausgeblendete Videos") {
                     Library.update { it.copy(hidden = emptySet()) }

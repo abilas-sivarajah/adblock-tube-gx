@@ -27,12 +27,14 @@ data class VideoItem(
     val game: String? = null,
     val gameName: String? = null,
 ) {
-    /** Twitch-Stream ('twitch:<login>') oder -VOD ('twitch-vod:<id>') statt YouTube-Video */
-    val isTwitch: Boolean get() = id.startsWith("twitch:") || id.startsWith("twitch-vod:")
+    /** Twitch-Stream ('twitch:<login>'), -VOD ('twitch-vod:<id>') oder -Clip ('twitch-clip:<slug>') statt YouTube-Video */
+    val isTwitch: Boolean get() = id.startsWith("twitch:") || id.startsWith("twitch-vod:") || id.startsWith("twitch-clip:")
+    val isTwitchClip: Boolean get() = id.startsWith("twitch-clip:")
     val twitchLogin: String? get() = if (id.startsWith("twitch:")) id.removePrefix("twitch:") else channelUrl?.takeIf { it.startsWith("twitch:") }?.removePrefix("twitch:")
 
     val url: String get() = when {
         id.startsWith("twitch-vod:") -> "https://www.twitch.tv/videos/" + id.removePrefix("twitch-vod:")
+        id.startsWith("twitch-clip:") -> "https://clips.twitch.tv/" + id.removePrefix("twitch-clip:")
         id.startsWith("twitch:") -> "https://www.twitch.tv/" + id.removePrefix("twitch:")
         else -> "https://www.youtube.com/watch?v=$id"
     }
