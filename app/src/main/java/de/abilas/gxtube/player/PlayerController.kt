@@ -418,7 +418,8 @@ object PlayerController {
                     gameName = v.gameName ?: video.gameName,
                 )
             } ?: video.copy(isLive = p.isLive)
-            val source = TwitchPlayer.source(p.url, mediaItem(enriched))
+            // Clips sind einfache MP4-Dateien (ohne Werbung, ohne Werbeblocker)
+            val source = if (p.clip) TwitchPlayer.clipSource(p.url, mediaItem(enriched)) else TwitchPlayer.source(p.url, mediaItem(enriched))
             val resume = if (p.isLive) 0L else startMs ?: resumePosition(enriched.id, enriched.durationSec * 1000)
             if (p.isLive) player.setMediaSource(source, true) else player.setMediaSource(source, resume)
             player.setPlaybackSpeed(if (p.isLive) 1f else _speed.value)
@@ -437,6 +438,7 @@ object PlayerController {
             ensureService()
             startTicker()
             Library.recordWatch(enriched, resume, enriched.durationSec * 1000)
+            if (p.clip) return
             // Qualitätsstufen stehen fest, sobald ExoPlayer die Master-Playlist geladen hat
             repeat(40) {
                 delay(500)

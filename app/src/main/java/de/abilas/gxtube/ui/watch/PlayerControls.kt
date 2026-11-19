@@ -202,7 +202,7 @@ fun PlayerControls(
                     }
                     CastButton(tint = Color.White)
                     // Twitch im Querformat: Chat neben dem Video ein-/ausblenden (wie in der Twitch-App)
-                    if (fullscreen && !remote && now.video.isTwitch && now.isLive) {
+                    if (fullscreen && !remote && now.video.isTwitch && (now.isLive || now.video.id.startsWith("twitch-vod:"))) {
                         val chatOn = de.abilas.gxtube.data.Library.data.collectAsStateWithLifecycle().value.settings.let { it.twitchChat && it.twitchLandscapeChat }
                         IconButton(onClick = {
                             de.abilas.gxtube.data.Library.updateSettings { it.copy(twitchChat = true, twitchLandscapeChat = !chatOn) }

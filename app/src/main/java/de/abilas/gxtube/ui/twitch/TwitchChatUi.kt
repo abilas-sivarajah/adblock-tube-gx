@@ -627,6 +627,8 @@ private fun ChatLine(
     myLogin: String?,
     onClick: () -> Unit,
     onMention: (String) -> Unit,
+    /** Chat-Wiedergabe: [ChatMessage.time] ist die Stelle im Video (statt Uhrzeit). */
+    replayTime: Boolean = false,
 ) {
     val context = LocalContext.current
     val nav = LocalNav.current
@@ -636,7 +638,9 @@ private fun ChatLine(
     // Gelöschte Nachrichten anderer: nur Moderatoren sehen den Text (durchgestrichen)
     val hidden = m.deleted && !iAmMod && !m.self
     val text: AnnotatedString = buildAnnotatedString {
-        if (showTime) withStyle(SpanStyle(color = Yt.colors.textSecondary, fontSize = 11.sp)) { append(timeFormat.format(Date(m.time)) + " ") }
+        if (showTime) withStyle(SpanStyle(color = Yt.colors.textSecondary, fontSize = 11.sp)) {
+            append((if (replayTime) Fmt.duration(m.time / 1000) else timeFormat.format(Date(m.time))) + " ")
+        }
         if (!m.system) {
             for ((i, b) in m.badges.withIndex()) {
                 val url = badgeUrls["${b.set}/${b.version}"] ?: badgeUrls["${b.set}/1"]
@@ -883,6 +887,132 @@ private fun ChatUserSheet(
                         onDismiss()
                     }
                 }
+            }
+        }
+    }
+}
+
+// ------------------------------------------------------------ Chat-Wiedergabe (VODs)
+
+/**
+ * Chat eines vergangenen Streams, passend zur Stelle im Video (wie auf twitch.tv).
+ * [roomId]: Kanal-Nummer für die 7TV/BTTV/FFZ-Emotes.
+ */
+@Composable
+fun ChatReplayPanel(vod: String, channel: String, roomId: String?, modifier: Modifier = Modifier, onClose: (() -> Unit)? = null) {
+    val lib by Library.data.collectAsStateWithLifecycle()
+    val ps = de.abilas.gxtube.ui.watch.rememberPlayerState()
+    val listState = rememberLazyListState()
+    var shown by remember(vod) { mutableStateOf<List<ChatMessage>>(emptyList()) }
+    var error by remember(vod) { mutableStateOf<String?>(null) }
+    var loading by remember(vod) { mutableStateOf(true) }
+    var badgeUrls by remember(channel) { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var extra by remember(roomId) { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var stick by remember { mutableStateOf(true) }
+    val atBottom by remember {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0
+            info.totalItemsCount == 0 || last >= info.totalItemsCount - 2
+        }
+    }
+    // Aktuelle Stelle für die Ladeschleife (ohne sie bei jeder Änderung neu zu starten)
+    val position = remember { java.util.concurrent.atomic.AtomicLong(0) }
+    position.set(ps.position)
+
+    LaunchedEffect(channel) { badgeUrls = runCatching { de.abilas.gxtube.twitch.TwitchBadges.load(channel) }.getOrDefault(emptyMap()) }
+    LaunchedEffect(roomId) {
+        if (roomId != null) extra = runCatching {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.abilas.gxtube.twitch.ThirdPartyEmotes.load(roomId).let { (c, g) -> g + c } }
+        }.getOrDefault(emptyMap())
+    }
+    LaunchedEffect(vod, extra) {
+        val buffer = ArrayList<de.abilas.gxtube.twitch.ReplayMessage>()
+        var cursor: String? = null
+        var start = -1
+        var failures = 0
+        while (true) {
+            val pos = (position.get() / 1000).toInt()
+            try {
+                // Gesprungen (oder Anfang): ab hier neu laden
+                if (buffer.isEmpty() || pos < start - 2 || pos > (buffer.lastOrNull()?.offset ?: 0) + 90) {
+                    val from = (pos - 30).coerceAtLeast(0)
+                    val page = de.abilas.gxtube.twitch.TwitchChatReplay.page(vod, from, null, extra)
+                    buffer.clear()
+                    buffer += page.messages
+                    cursor = page.next
+                    start = from
+                }
+                // Etwas vorausladen
+                var rounds = 0
+                while (cursor != null && (buffer.lastOrNull()?.offset ?: 0) < pos + 20 && rounds++ < 5) {
+                    val page = de.abilas.gxtube.twitch.TwitchChatReplay.page(vod, null, cursor, extra)
+                    buffer += page.messages
+                    cursor = page.next
+                }
+                // Alte Nachrichten weit hinter der Stelle vergessen
+                if (buffer.size > 3000) {
+                    val keep = buffer.filter { it.offset >= pos - 600 }
+                    buffer.clear()
+                    buffer += keep
+                    start = buffer.firstOrNull()?.offset ?: pos
+                }
+                shown = buffer.asSequence().filter { it.offset <= pos }.map { it.message }.distinctBy { it.id }.toList().takeLast(200)
+                error = null
+                failures = 0
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                failures++
+                if (shown.isEmpty()) error = e.message ?: "Chat konnte nicht geladen werden"
+            }
+            loading = false
+            delay(if (failures > 0) (2000L * failures).coerceAtMost(30_000) else 700)
+        }
+    }
+    LaunchedEffect(atBottom, listState.isScrollInProgress) { if (listState.isScrollInProgress) stick = atBottom }
+    LaunchedEffect(shown.lastOrNull()?.id, stick) { if (stick && shown.isNotEmpty()) listState.scrollToItem(shown.lastIndex) }
+
+    Column(modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = if (onClose != null) 0.dp else 12.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Chat-Wiedergabe", color = Yt.colors.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.width(8.dp))
+            Text(if (loading) "lädt …" else "läuft mit dem Video", color = Yt.colors.textSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            if (onClose != null) IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "Chat ausblenden", tint = Yt.colors.text) }
+        }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            when {
+                error != null && shown.isEmpty() -> Text(error.orEmpty(), color = Yt.colors.textSecondary, fontSize = 13.sp, modifier = Modifier.align(Alignment.Center).padding(24.dp))
+                !loading && shown.isEmpty() -> Text("Noch keine Nachrichten an dieser Stelle", color = Yt.colors.textSecondary, fontSize = 13.sp, modifier = Modifier.align(Alignment.Center).padding(24.dp))
+            }
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 6.dp)) {
+                items(shown, key = { it.id }) { m ->
+                    ChatLine(
+                        m = m,
+                        badgeUrls = badgeUrls,
+                        showTime = lib.settings.twitchChatTimestamps,
+                        iAmMod = false,
+                        myLogin = null,
+                        onClick = {},
+                        onMention = {},
+                        replayTime = true,
+                    )
+                }
+            }
+            if (!stick && shown.isNotEmpty()) {
+                Text(
+                    "Zur aktuellen Stelle ↓",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 8.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(TwitchPurple)
+                        .clickable { stick = true }
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                )
             }
         }
     }

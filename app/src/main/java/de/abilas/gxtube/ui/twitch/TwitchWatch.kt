@@ -63,6 +63,7 @@ import de.abilas.gxtube.ui.LocalNav
 import de.abilas.gxtube.ui.components.Avatar
 import de.abilas.gxtube.ui.components.LoadingBox
 import de.abilas.gxtube.ui.components.PillButton
+import de.abilas.gxtube.ui.components.Chip
 import de.abilas.gxtube.ui.components.VideoRow
 import de.abilas.gxtube.ui.shareText
 import de.abilas.gxtube.ui.theme.Yt
@@ -143,12 +144,35 @@ fun TwitchWatchDetails(n: NowPlaying) {
                 }
             }
         }
+        // Clip: wer ihn erstellt hat, und ab zur Stelle im ganzen Stream
+        val w = n.twitch
+        if (v.isTwitchClip && w != null && (w.clipCurator != null || w.clipVod != null)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(w.clipCurator?.let { "Clip von $it" }.orEmpty(), fontSize = 13.sp, color = Yt.colors.textSecondary, modifier = Modifier.weight(1f))
+                w.clipVod?.let { vodId ->
+                    PillButton("Ganzen Stream ansehen", null, {
+                        PlayerController.play(VideoItem(id = TwitchApi.vodId(vodId), title = "", channelName = v.channelName, channelUrl = v.channelUrl, channelAvatar = v.channelAvatar), startMs = w.clipOffset * 1000L)
+                    })
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+        }
         HorizontalDivider(color = Yt.colors.divider)
+        val vod = v.id.takeIf { it.startsWith("twitch-vod:") }?.removePrefix("twitch-vod:")
+        // VOD: Chat-Wiedergabe oder weitere Videos (wie auf twitch.tv)
+        var vodTab by remember(v.id) { mutableStateOf(if (lib.settings.twitchChat) 0 else 1) }
+        if (vod != null && login != null) {
+            Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip("Chat-Wiedergabe", vodTab == 0, { vodTab = 0 })
+                Chip("Weitere Videos", vodTab == 1, { vodTab = 1 })
+            }
+        }
         when {
             n.isLive && login != null && lib.settings.twitchChat -> ChatPanel(login, Modifier.weight(1f))
             n.isLive -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 PillButton("Chat einblenden", null, { Library.updateSettings { it.copy(twitchChat = true) } })
             }
+            vod != null && login != null && vodTab == 0 -> ChatReplayPanel(vod, login, n.twitch?.userId, Modifier.weight(1f))
             login != null -> MoreVods(login, v.id, Modifier.weight(1f))
         }
     }

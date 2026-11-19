@@ -84,6 +84,7 @@ import coil3.compose.AsyncImage
 import de.abilas.gxtube.R
 import de.abilas.gxtube.data.Library
 import de.abilas.gxtube.data.VideoItem
+import de.abilas.gxtube.twitch.ClipPeriod
 import de.abilas.gxtube.twitch.TwitchAccount
 import de.abilas.gxtube.twitch.TwitchApi
 import de.abilas.gxtube.twitch.TwitchChannel
@@ -695,7 +696,7 @@ class TwitchSearchViewModel(initial: String) : ViewModel() {
         suggestions = emptyList()
         field = TextFieldValue(q, TextRange(q.length))
         submitted = q
-        Library.addSearch(q)
+        Library.addSearch(q, twitch = true)
         job?.cancel()
         moreJob?.cancel()
         loadingMore = false
@@ -828,7 +829,7 @@ fun TwitchSearchScreen(initial: String) {
         // Beim Tippen: frühere Suchen und Vorschläge von Twitch (Kanäle, Kategorien, Suchbegriffe)
         if (editing || vm.submitted == null) {
             val q = vm.field.text.trim()
-            val history = lib.searchHistory.filter { q.isEmpty() || it.contains(q, ignoreCase = true) }.take(if (q.isEmpty()) 10 else 3)
+            val history = lib.twitchSearchHistory.filter { q.isEmpty() || it.contains(q, ignoreCase = true) }.take(if (q.isEmpty()) 10 else 3)
             val remote = vm.suggestions.filterNot { s -> s.channel == null && s.game == null && history.any { it.equals(s.text, true) } }
             LazyColumn(contentPadding = PaddingValues(bottom = 80.dp), modifier = Modifier.fillMaxSize()) {
                 items(history, key = { "h-$it" }) { h ->
@@ -837,7 +838,7 @@ fun TwitchSearchScreen(initial: String) {
                         text = AnnotatedString(h),
                         onClick = { doSubmit(h) },
                     ) {
-                        IconButton(onClick = { Library.removeSearch(h) }) { Icon(Icons.Filled.Close, "Aus Suchverlauf entfernen", tint = Yt.colors.textSecondary) }
+                        IconButton(onClick = { Library.removeSearch(h, twitch = true) }) { Icon(Icons.Filled.Close, "Aus Suchverlauf entfernen", tint = Yt.colors.textSecondary) }
                         IconButton(onClick = { vm.onChange(TextFieldValue(h, TextRange(h.length))) }) { Icon(Icons.Outlined.NorthWest, "Übernehmen", tint = Yt.colors.text) }
                     }
                 }
@@ -1079,9 +1080,30 @@ class TwitchChannelViewModel(private val login: String) : ViewModel() {
     var channel by mutableStateOf<TwitchChannel?>(null)
         private set
     val videos = TwitchList(viewModelScope)
+    /** 0 = Videos, 1 = Clips */
+    var tab by mutableStateOf(0)
+    var period by mutableStateOf(ClipPeriod.WEEK)
+        private set
+    var clips by mutableStateOf<List<VideoItem>?>(null)
+        private set
+    var clipsError by mutableStateOf<String?>(null)
+        private set
+    private var clipsJob: kotlinx.coroutines.Job? = null
 
     init {
         load()
+    }
+
+    fun loadClips(p: ClipPeriod = period) {
+        period = p
+        clips = null
+        clipsError = null
+        clipsJob?.cancel()
+        clipsJob = viewModelScope.launch {
+            runCatching { TwitchApi.clips(login, p) }
+                .onSuccess { clips = it }
+                .onFailure { clipsError = it.message ?: "Clips konnten nicht geladen werden" }
+        }
     }
 
     fun load() {
@@ -1149,6 +1171,31 @@ fun TwitchChannelScreen(login: String) {
             c?.live?.let { live ->
                 item(key = "live-head") { SectionHeader("Jetzt live") }
                 item(key = "live") { VideoCard(live, onClick = { nav.openVideo(live) }) }
+            }
+            // Videos | Clips (wie auf twitch.tv)
+            item(key = "tabs") {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("Videos", vm.tab == 0, { vm.tab = 0 })
+                    Chip("Clips", vm.tab == 1, {
+                        vm.tab = 1
+                        if (vm.clips == null && vm.clipsError == null) vm.loadClips()
+                    })
+                }
+            }
+            if (vm.tab == 1) {
+                item(key = "clip-periods") {
+                    LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
+                        items(ClipPeriod.entries) { p -> Chip(p.label, vm.period == p, { vm.loadClips(p) }) }
+                    }
+                }
+                val list = vm.clips
+                when {
+                    vm.clipsError != null -> item(key = "clips-error") { ErrorBox(vm.clipsError.orEmpty(), onRetry = { vm.loadClips() }) }
+                    list == null -> item(key = "clips-loading") { LoadingBox(Modifier.padding(top = 40.dp)) }
+                    list.isEmpty() -> item(key = "clips-empty") { ErrorBox("Keine Clips in diesem Zeitraum", onRetry = null) }
+                    else -> items(list, key = { it.id }) { v -> VideoRow(v, onClick = { nav.openVideo(v) }) }
+                }
+                return@LazyColumn
             }
             if (vm.videos.items.isNotEmpty()) item(key = "videos-head") { SectionHeader("Vergangene Streams und Videos") }
             when {

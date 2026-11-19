@@ -223,7 +223,7 @@ fun SettingsScreen() {
                 }
             }
             item { ChoiceRow("Wiedergabeverlauf löschen", "${lib.history.size} Einträge") { dialog = "clear-history" } }
-            item { ChoiceRow("Suchverlauf löschen", "${lib.searchHistory.size} Einträge") { Library.clearSearchHistory() } }
+            item { ChoiceRow("Suchverlauf löschen", "${lib.searchHistory.size} bei YouTube, ${lib.twitchSearchHistory.size} bei Twitch") { Library.clearSearchHistory() } }
             item {
                 ChoiceRow("\"Kein Interesse\" zurücksetzen", "${lib.hidden.size} ausgeblendete Videos") {
                     Library.update { it.copy(hidden = emptySet()) }

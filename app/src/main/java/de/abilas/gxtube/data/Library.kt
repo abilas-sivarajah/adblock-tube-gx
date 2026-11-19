@@ -102,7 +102,10 @@ data class LibraryData(
     val watchLater: List<VideoItem> = emptyList(),
     val liked: List<VideoItem> = emptyList(),
     val disliked: Set<String> = emptySet(),
+    /** Suchverlauf von YouTube */
     val searchHistory: List<String> = emptyList(),
+    /** Eigener Suchverlauf für Twitch */
+    val twitchSearchHistory: List<String> = emptyList(),
     /** Ähnliche Videos aus dem, was du geschaut hast – daraus entsteht die Startseite. */
     val recommendations: List<VideoItem> = emptyList(),
     /** "Kein Interesse" */
@@ -281,17 +284,21 @@ object Library {
 
     // ---------------------------------------------------------------- Suche
 
-    fun addSearch(query: String) {
+    /** Suche merken – YouTube und Twitch haben getrennte Verläufe ([twitch]). */
+    fun addSearch(query: String, twitch: Boolean = false) {
         if (!settings.searchHistoryEnabled || query.isBlank()) return
+        val q = query.trim()
         update { d ->
-            d.copy(searchHistory = (listOf(query.trim()) + d.searchHistory.filterNot { it.equals(query.trim(), true) })
-                .take(MAX_SEARCH_HISTORY))
+            if (twitch) d.copy(twitchSearchHistory = (listOf(q) + d.twitchSearchHistory.filterNot { it.equals(q, true) }).take(MAX_SEARCH_HISTORY))
+            else d.copy(searchHistory = (listOf(q) + d.searchHistory.filterNot { it.equals(q, true) }).take(MAX_SEARCH_HISTORY))
         }
     }
 
-    fun removeSearch(query: String) = update { d -> d.copy(searchHistory = d.searchHistory - query) }
+    fun removeSearch(query: String, twitch: Boolean = false) = update { d ->
+        if (twitch) d.copy(twitchSearchHistory = d.twitchSearchHistory - query) else d.copy(searchHistory = d.searchHistory - query)
+    }
 
-    fun clearSearchHistory() = update { it.copy(searchHistory = emptyList()) }
+    fun clearSearchHistory() = update { it.copy(searchHistory = emptyList(), twitchSearchHistory = emptyList()) }
 
     // ---------------------------------------------------------------- Empfehlungen
 

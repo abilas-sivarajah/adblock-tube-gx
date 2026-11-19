@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import de.abilas.gxtube.ui.twitch.TwitchAdOverlay
 import de.abilas.gxtube.ui.twitch.TwitchWatchDetails
 import de.abilas.gxtube.ui.twitch.ChatPanel
+import de.abilas.gxtube.ui.twitch.ChatReplayPanel
 import de.abilas.gxtube.data.Library
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
@@ -114,7 +115,8 @@ fun WatchOverlay(inPip: Boolean, fullscreen: Boolean) {
                 .background(Color.Black),
         ) {
             // Twitch im Querformat: Chat rechts neben dem Video (abschaltbar über den Knopf oben)
-            val sideChat = chatLogin != null && n.video.isTwitch && n.isLive && !remote && maxWidth > maxHeight &&
+            val replayVod = n.video.id.takeIf { it.startsWith("twitch-vod:") }?.removePrefix("twitch-vod:")
+            val sideChat = chatLogin != null && n.video.isTwitch && (n.isLive || replayVod != null) && !remote && maxWidth > maxHeight &&
                 lib.settings.twitchChat && lib.settings.twitchLandscapeChat
             val chatWidth = minOf(360.dp, maxWidth * 0.36f)
             Row(Modifier.fillMaxSize()) {
@@ -139,7 +141,9 @@ fun WatchOverlay(inPip: Boolean, fullscreen: Boolean) {
                             .background(Yt.colors.background)
                             .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.End)),
                     ) {
-                        ChatPanel(chatLogin, Modifier.fillMaxSize(), onClose = { Library.updateSettings { it.copy(twitchLandscapeChat = false) } })
+                        val close = { Library.updateSettings { it.copy(twitchLandscapeChat = false) } }
+                        if (replayVod != null) ChatReplayPanel(replayVod, chatLogin, n.twitch?.userId, Modifier.fillMaxSize(), onClose = close)
+                        else ChatPanel(chatLogin, Modifier.fillMaxSize(), onClose = close)
                     }
                 }
             }

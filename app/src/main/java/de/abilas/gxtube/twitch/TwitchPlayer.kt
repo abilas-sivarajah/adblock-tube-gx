@@ -7,6 +7,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import de.abilas.gxtube.data.Http
 import de.abilas.gxtube.data.Library
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -61,6 +62,15 @@ object TwitchPlayer {
             .setAllowCrossProtocolRedirects(true)
         return HlsMediaSource.Factory(TwitchDataSource.Factory(upstream, adBlock))
             .createMediaSource(item.buildUpon().setUri(url).setMimeType(MimeTypes.APPLICATION_M3U8).build())
+    }
+
+    /** Clip: MP4-Datei direkt. */
+    fun clipSource(url: String, item: MediaItem): MediaSource {
+        val upstream = DefaultHttpDataSource.Factory()
+            .setUserAgent(Http.USER_AGENT)
+            .setAllowCrossProtocolRedirects(true)
+        return ProgressiveMediaSource.Factory(upstream)
+            .createMediaSource(item.buildUpon().setUri(url).setMimeType(MimeTypes.VIDEO_MP4).build())
     }
 
     /** Qualitätsstufen (Höhe, Bildrate) aus der Master-Playlist des Streams. */

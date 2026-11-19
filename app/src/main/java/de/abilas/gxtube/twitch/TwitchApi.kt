@@ -75,7 +75,7 @@ data class TwitchSuggestion(
 ) {
     val key get() = channel?.let { "c:" + it.login } ?: game?.let { "g:" + it.name.lowercase() } ?: ("q:" + text.lowercase())
 }
-data class TwitchPlayback(val url: String, val isLive: Boolean, val login: String?, val vod: String?, val account: Boolean)
+data class TwitchPlayback(val url: String, val isLive: Boolean, val login: String?, val vod: String?, val account: Boolean, val clip: Boolean = false)
 
 /** Was gerade läuft: der Stream bzw. das VOD und der Kanal dazu. */
 data class TwitchWatchInfo(
@@ -85,7 +85,19 @@ data class TwitchWatchInfo(
     val followers: Long,
     val startedAt: Long?,
     val game: TwitchGame?,
+    /** Clip: wer ihn erstellt hat und aus welchem VOD (mit Stelle in Sekunden) er stammt */
+    val clipCurator: String? = null,
+    val clipVod: String? = null,
+    val clipOffset: Int = 0,
 )
+
+/** Zeitraum für die Clips eines Kanals. */
+enum class ClipPeriod(val gql: String, val label: String) {
+    DAY("LAST_DAY", "24 Stunden"),
+    WEEK("LAST_WEEK", "7 Tage"),
+    MONTH("LAST_MONTH", "30 Tage"),
+    ALL("ALL_TIME", "Alle"),
+}
 
 class TwitchException(message: String, val code: String? = null, val signIn: Boolean = false) : IOException(message)
 
@@ -118,18 +130,22 @@ object TwitchApi {
     // ------------------------------------------------------------ IDs
 
     private val LOGIN = Regex("^[a-z0-9_]{1,25}$")
-    private val ID = Regex("^twitch:[a-z0-9_]{1,25}$|^twitch-vod:\\d{1,15}$")
+    private val ID = Regex("^twitch:[a-z0-9_]{1,25}$|^twitch-vod:\\d{1,15}$|^twitch-clip:[A-Za-z0-9_-]{1,120}$")
+    private val CLIP_SLUG = Regex("^[A-Za-z0-9_-]{1,120}$")
 
     fun isTwitch(id: String?) = id != null && ID.matches(id)
     fun liveId(login: String) = "twitch:" + login.lowercase()
     fun vodId(id: String) = "twitch-vod:$id"
+    fun clipId(slug: String) = "twitch-clip:$slug"
+    /** Slug eines Clips ('twitch-clip:<slug>'), sonst null. */
+    fun clipSlug(id: String?): String? = id?.takeIf { it.startsWith("twitch-clip:") }?.removePrefix("twitch-clip:")?.takeIf { CLIP_SLUG.matches(it) }
     fun channelUrl(login: String) = "twitch:" + login.lowercase()
     fun loginOfChannelUrl(url: String?): String? = url?.takeIf { it.startsWith("twitch:") }?.removePrefix("twitch:")?.takeIf { LOGIN.matches(it) }
     fun validLogin(login: String?) = login != null && LOGIN.matches(login.lowercase())
 
     /** Login (live) bzw. VOD-Nummer aus der ID. */
     fun target(id: String): Pair<String?, String?>? = when {
-        !isTwitch(id) -> null
+        !isTwitch(id) || id.startsWith("twitch-clip:") -> null
         id.startsWith("twitch-vod:") -> null to id.removePrefix("twitch-vod:")
         else -> id.removePrefix("twitch:") to null
     }
@@ -258,6 +274,42 @@ object TwitchApi {
             game = g?.displayName,
             gameName = g?.name,
         )
+    }
+
+    private const val CLIP = "id slug title viewCount durationSeconds createdAt thumbnailURL(width: 480, height: 272) game { name displayName } curator { login displayName } broadcaster { id login displayName profileImageURL(width: 70) }"
+
+    /** Clip ('twitch-clip:<slug>'). */
+    fun clip(obj: JsonObject?): VideoItem? {
+        val node = obj ?: return null
+        val slug = node["slug"].str?.takeIf { CLIP_SLUG.matches(it) } ?: return null
+        val b = node["broadcaster"].obj
+        val login = b?.get("login").str?.lowercase()
+        val g = game(node["game"].obj)
+        return VideoItem(
+            id = clipId(slug),
+            title = node["title"].str.orEmpty(),
+            channelName = b?.get("displayName").str ?: login.orEmpty(),
+            channelUrl = login?.let { channelUrl(it) },
+            channelAvatar = b?.get("profileImageURL").str,
+            thumbnail = node["thumbnailURL"].str,
+            durationSec = node["durationSeconds"].long ?: -1,
+            viewCount = node["viewCount"].long ?: -1,
+            uploadedAt = time(node["createdAt"].str),
+            isLive = false,
+            game = g?.displayName,
+            gameName = g?.name,
+        )
+    }
+
+    /** Beliebteste Clips eines Kanals im Zeitraum (Twitch blättert hier nicht weiter – höchstens 50). */
+    suspend fun clips(login: String, period: ClipPeriod): List<VideoItem> {
+        if (!validLogin(login)) throw TwitchException("Ungültiger Kanal")
+        val d = gql(
+            "query(\$login: String!) { user(login: \$login) { clips(first: 50, criteria: {period: ${period.gql}, sort: VIEWS_DESC}) { edges { node { $CLIP } } } } }",
+            vars("login" to login.lowercase()),
+        )
+        val user = d["user"].obj ?: throw TwitchException("Kanal nicht gefunden")
+        return user["clips"].obj.edges().mapNotNull { clip(it["node"].obj) }
     }
 
     fun channel(obj: JsonObject?): TwitchChannel? {
@@ -461,6 +513,24 @@ object TwitchApi {
 
     /** Was gerade läuft (für den Player). */
     suspend fun watchInfo(id: String): TwitchWatchInfo {
+        clipSlug(id)?.let { slug ->
+            val c = gql(
+                "query(\$slug: ID!) { clip(slug: \$slug) { $CLIP videoOffsetSeconds video { id } broadcaster { followers { totalCount } } } }",
+                vars("slug" to slug),
+            )["clip"].obj ?: throw TwitchException("Diesen Clip gibt es nicht mehr")
+            val b = c["broadcaster"].obj
+            return TwitchWatchInfo(
+                video = clip(c) ?: throw TwitchException("Diesen Clip gibt es nicht mehr"),
+                login = b?.get("login").str?.lowercase(),
+                userId = b?.get("id").str,
+                followers = b?.get("followers").obj?.get("totalCount").long ?: -1,
+                startedAt = null,
+                game = game(c["game"].obj),
+                clipCurator = c["curator"].obj?.get("displayName").str,
+                clipVod = c["video"].obj?.get("id").str,
+                clipOffset = c["videoOffsetSeconds"].long?.toInt() ?: 0,
+            )
+        }
         val (login, vod) = target(id) ?: throw TwitchException("Ungültiger Twitch-Stream")
         if (vod != null) {
             val v = gql("query(\$id: ID!) { video(id: \$id) { $VIDEO owner { $USER followers { totalCount } } } }", vars("id" to vod))["video"].obj
@@ -476,6 +546,27 @@ object TwitchApi {
     }
 
     // ------------------------------------------------------------ Wiedergabe
+
+    /** Clip: MP4-Datei in der besten Qualität bis [maxHeight], mit Twitchs Zugangs-Token. */
+    suspend fun clipPlayback(slug: String, maxHeight: Int = 1080): TwitchPlayback {
+        val c = gql(
+            "query(\$slug: ID!) { clip(slug: \$slug) { broadcaster { login } playbackAccessToken(params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: \"site\"}) { signature value } videoQualities { frameRate quality sourceURL } } }",
+            vars("slug" to slug),
+            clientId = WEB_CLIENT,
+        )["clip"].obj ?: throw TwitchException("Diesen Clip gibt es nicht mehr")
+        val token = c["playbackAccessToken"].obj
+        val sig = token?.get("signature").str
+        val value = token?.get("value").str
+        if (sig == null || value == null) throw TwitchException("Twitch gibt den Clip gerade nicht heraus")
+        val qualities = (c["videoQualities"] as? JsonArray)?.mapNotNull { q ->
+            val o = q.obj ?: return@mapNotNull null
+            val url = o["sourceURL"].str ?: return@mapNotNull null
+            (o["quality"].str?.toIntOrNull() ?: 0) to url
+        }.orEmpty().sortedByDescending { it.first }
+        val pick = qualities.firstOrNull { it.first <= maxHeight } ?: qualities.lastOrNull() ?: throw TwitchException("Clip ohne Video")
+        val url = pick.second + (if ('?' in pick.second) "&" else "?") + "sig=" + URLEncoder.encode(sig, "UTF-8") + "&token=" + URLEncoder.encode(value, "UTF-8")
+        return TwitchPlayback(url, isLive = false, login = c["broadcaster"].obj?.get("login").str?.lowercase(), vod = null, account = false, clip = true)
+    }
 
     private val FORBIDDEN = mapOf(
         "UNAUTHORIZED_ENTITLEMENTS" to "Nur für Abonnenten des Kanals – melde dich mit einem Konto an, das den Kanal abonniert hat.",
@@ -504,6 +595,7 @@ object TwitchApi {
 
     /** Wiedergabe-Adresse. Angemeldet zuerst mit Konto (Abo-Streams, Abonnenten ohne Werbung), sonst anonym. */
     suspend fun playback(id: String): TwitchPlayback {
+        clipSlug(id)?.let { return clipPlayback(it) }
         val (login, vod) = target(id) ?: throw TwitchException("Ungültiger Twitch-Stream")
         val v = vars("isLive" to (vod == null), "login" to (login ?: ""), "isVod" to (vod != null), "vodID" to (vod ?: ""), "playerType" to "site", "platform" to "web")
         var last: Exception? = null
